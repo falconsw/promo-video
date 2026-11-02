@@ -77,7 +77,7 @@ async function setup() {
   const cfg = await project()
   $('end').querySelector('.pills').innerHTML = (cfg.links ?? []).map((l) => /\s/.test(l)
     ? `<div class="pill"><code>${l}</code></div>` : `<div class="pill"><span class="dot" style="background:#9aa8ff"></span>${l}</div>`).join('')
-  // the fixed sign-off after the last line: the end card slides up, like / comment / share / save, "Takip et"
+  // an optional sign-off (only with an engine/outro/<name>.json, none ship): the end card slides up, like / comment / share / save, "Takip et"
   cta = outroCta($('stage'), N, { lift: $('end') })
   T = { brand: cue('brand'), winIn: start('demo') - .25, winOut: start('cta') - .5, outro: start('cta'), link: cue('link'), introOut: end('intro') }
 }

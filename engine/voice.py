@@ -12,11 +12,8 @@
 # words.json (the timeline scenes follow) and voice.wav (the lines mixed at their starts, -14 LUFS).
 # A line is only re-synthesized when its spoken text, the model or the style changes: takes vary between calls,
 # so a take you like stays until you change its words.
-# Fixed sign-offs per platform: outro/<name>.json (tiktok: "…takip et!", youtube: "…abone ol!"; their own taps in
-# "sfx"). Their takes live in outro/<voice>/, not in the project, so every video says them the same way. A format
-# gets the outro named like it (formats.tiktok → tiktok) or the one in its "outro" field; false or no such outro
-# (x) means none. words.json / voice.wav are the script alone; words.<outro>.json / voice.<outro>.wav add an outro.
-# promo.json "outro": false leaves them all out.
+# Optional fixed sign-offs (none ship): an outro/<name>.json line is appended to the format named like it (or the one
+# in its "outro" field), cached in outro/<voice>/, written as words.<outro>.json / voice.<outro>.wav.
 # API key: $GEMINI_API_KEY or ~/.config/gemini/api_key (aistudio.google.com/apikey).
 # Free tier: Google may use the text to improve its products, so only send public promo copy.
 import base64, difflib, json, os, re, subprocess, sys, time, urllib.error, urllib.request

@@ -34,7 +34,7 @@ kullanabilir, bu yüzden yalnızca herkese açık tanıtım metinleri gönderili
 Uygulamanızın klasöründe Claude Code'a şunu yazmanız yeterli: "Bu uygulama için TikTok tanıtım videosu yap", "ses
 ekle", "arka plan sarı olsun" ...
 
-Varsayılanlar Türkçedir: Gemini `sadachbia` sesi ve Türkçe kapanış kayıtları ("Beğen, yorumla, paylaş, kaydet…").
+Varsayılanlar Türkçedir: Gemini `sadachbia` sesi.
 Başka bir dil ya da ses isterseniz Claude'a söyleyin.
 
 Ayrıntılar: [SKILL.md](SKILL.md) (Claude'un izlediği adımlar) ve [engine/README.md](engine/README.md) (motorun

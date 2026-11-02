@@ -58,11 +58,6 @@ promo/
   (seconds after the last word).
 - A line's own `style` replaces the voice's for that line (a weary hook, a sudden energetic reveal, "strong emphasis on
   'tek tıkla'"); changing it re-synthesizes that line only.
-- Outros: a narrated format ends with the fixed sign-off named like it (`outro/tiktok.json` "…takip et!",
-  `outro/youtube.json` "…abone ol!"; cues `outro-like` … `outro-follow`, a built-in `tap` on each) or the one in its
-  `"outro"` field; none for `x` or `"outro": false`. Takes are cached in `outro/<voice>/` so every video uses the same
-  recordings. `promo voice` writes `words.json`/`voice.wav` (script only) and `words.<outro>.json`/`voice.<outro>.wav`;
-  scenes get `?outro=` and draw it with `outroCta(stage, N, { lift: endCard })`.
 - `sfx`: `[{ "file": "whoosh", "line": "intro", "offset": -0.5, "gain": -4 }]` mixes sound effects into voice.wav, at a
   line's start (`line`), a cue (`cue`) or a time (`at`), plus `offset`. `until` (a cue, a line id = its end, `"end"` or
   seconds) cuts it to a span and `fade` fades it in and out — a music bed. `file` is a project path or a built-in from

@@ -17,7 +17,7 @@ without the user running tools. They watch the result and give notes.
   scene, and for apps the PromoDirector that drives them.
 - Examples: `engine/templates/project/scenes/` (what `$P new` copies) and the full hand-choreographed scenes in
   `templates/` — read one before writing a new scene.
-- `engine/lite/` is a simpler pipeline (`tts.py` → `outro.py` → `build.sh`, scenes driven through
+- `engine/lite/` is a simpler pipeline (`tts.py` → `build.sh`, scenes driven through
   `window.renderAt(t)`). New videos use `promo.mjs`. See §7.
 
 Requirements: macOS on Apple Silicon (Whisper runs on MLX), Node 22+, Google Chrome, ffmpeg, uv, the Whisper model
@@ -175,22 +175,8 @@ Then present it for approval (see above) — nothing is synthesized before the u
   oranges over `#120703`, spoken-word subtitle colour `#ffd0a1` (the presets' optional `hi`). Same rule for all: the
   preset as is, the rest of the scene unchanged.
 - End card: the app's icon, name, tagline / links.
-- **Fixed outros, one cut per platform**: promo.json `formats` has `tiktok`, `youtube` and `x` (same scene).
-  `promo voice` gives each the outro named like it — `engine/outro/tiktok.json` "Beğen, yorumla, paylaş, kaydet;
-  daha fazlası için takip et!" and `youtube.json` "…abone ol!" (soft `tap` on each verb); **X gets none** (no
-  `x.json`). Takes are synthesized once and kept in `engine/outro/<voice>/`: every video plays the same recordings;
-  don't re-roll or edit them unless the user asks. Cuts: `words.json`/`voice.wav` (script only, X),
-  `words.<outro>.json`/`voice.<outro>.wav`; render/preview/play pick theirs. Visually the scene calls
-  `outroCta($('stage'), N, { lift: $('end') })` every frame: the end card slides up, then the platform's own
-  buttons are tapped on their words — TikTok: bare white glyphs, heart red, bookmark yellow, red "＋ Takip et";
-  YouTube: round translucent buttons, thumb fills, Kaydet turns to a check, red "Abone ol" — with the follow button
-  as wide as the row. The buttons keep platform colours on any backdrop: nothing to redo per video. `$P script`
-  lists the outros as approved; `"outro": false` (all) or a format's `"outro": false` drops them. Keep the end card
-  above y ≈ 760 once lifted (`liftBy`, `liftScale`); the row sits at y 860–1190.
-  **Never hand-roll this outro** — simplified copies (dim icons that only grow, no rings or dots, a narrow follow
-  pill, TikTok icons in the YouTube cut, no `tap` sounds) look wrong. Lite scenes use `engine/lite/cta.js`, the same
-  code as a plain script: `<script src="cta.js"></script>`, `outroCta($('stage'), { platform, start, taps: [like,
-  comment, share, save], follow, lift })`, `SFX.push(...cta.sfx)` (`tap` / `tapf` in build.sh), `cta(t)` every frame.
+- No spoken sign-off: every cut ends on the end card (the tiktok/youtube/x formats differ only where the user
+  asks).
 
 ## 5. Check, render, hand off
 
@@ -253,7 +239,7 @@ button without their go-ahead. If they want help in the browser:
   re-encoding apps (WhatsApp) then wash the video out. `render.mjs` sets them with `setparams` + x264 VUI and `check`
   fails without bt709/bt709/bt709. To fix an old file: re-encode at 30 fps, level 4.1, `setparams=…` +
   `-x264-params colorprim=bt709:transfer=bt709:colormatrix=bt709`, or send it as a document (no re-encode).
-- A script named like a stdlib module (`platform.py`) breaks Whisper's imports (the lite engine's is `outro.py`).
+- A script named like a stdlib module (`platform.py`) breaks Whisper's imports.
 - Sample data is always fake: made-up people and businesses ("Kırıntı Mutfak", "Örnek Kafe"), blurred photos, masked
   phones, personal paths covered. Real accounts and data never appear.
 
@@ -262,13 +248,10 @@ button without their go-ahead. If they want help in the browser:
 A simpler, self-contained pipeline. Each project gets its own copy (`cp -R engine/lite/* <project>/promo/`).
 
 - `tts.py` (`LINES`, `GAPS`, `STYLE`, per-line `STYLES[i]`, `SAY`; run with
-  `uv run --no-project --python cpython-3.12-macos-aarch64-none --with mlx-whisper tts.py sadachbia`) → `outro.py`
-  (appends the fixed outro 0.6 s after the last line → `words.{tiktok,youtube}.json`) → `build.sh [tiktok youtube x]`
+  `uv run --no-project --python cpython-3.12-macos-aarch64-none --with mlx-whisper tts.py sadachbia`) → `build.sh [tiktok youtube x]`
   (`SLUG`, `DEST` env; `render.mjs` over `window.renderAt(t)`, `JOBS` Chrome processes, `SPLIT=<frame>` draws the
   part every cut shares once as `out/common.mp4` — delete it after changing anything before SPLIT; sound cues from
   the scene's `window.SFX`, per-cue volumes in a `case`). `build.sh` is zsh: `${ms}`, `[s${n}]` inside strings.
 - Example scenes: `templates/scene-studio-example.html` (orange, a wall of promo videos with a focus pull, a 5-step
   rail, one window whose panes change, slamming step numerals) and `templates/scene-leftover-example.html`; both end
   with `cta.js`. URL params `?voice=sadachbia&p=tiktok|youtube|x`.
-- Changing only the outro of a finished lite cut: keep `out/common.mp4` when SPLIT is before every change (the CTA's
-  lift starts 0.55 s before the outro line), `./build.sh tiktok youtube` redraws just the tails (~45 s each).

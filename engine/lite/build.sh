@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Renders each cut and mixes narration + sound cues. SLUG and DEST per project.
 #   ./build.sh [tiktok youtube x]   → out/<slug>-<cut>.mp4, copied to $DEST
-# Needs narration/<voice>/words*.json and voice*.wav (tts.py, then outro.py). Delete out/common.mp4 after changing the scene.
+# Needs narration/<voice>/words*.json and voice*.wav (tts.py). Delete out/common.mp4 after changing the scene.
 set -euo pipefail
 cd "$(dirname "$0")"
 V=${VOICE:-sadachbia}
@@ -11,7 +11,7 @@ SPLIT=${SPLIT:-0}   # frames every cut shares (end before the CTA / outro starts
 mkdir -p out "$DEST"
 for P in ${@:-tiktok youtube x}; do
   page="compose-tiktok.html?voice=$V&p=$P"
-  wav=narration/$V/voice.wav; [[ $P == x ]] || wav=narration/$V/voice.$P.wav
+  wav=narration/$V/voice.$P.wav; [[ -s $wav ]] || wav=narration/$V/voice.wav
   # REUSE=1 keeps an existing silent render (only the sound is mixed again).
   # Every cut is identical up to SPLIT (the frame before the platform outro differs): that part is drawn once
   # (out/common.mp4) and each cut only draws its own tail.

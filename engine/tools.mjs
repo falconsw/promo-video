@@ -43,8 +43,8 @@ export function script(cfg) {
     return `${i + 1}. ${plain(text)}  (≈${secs.toFixed(1)} sn)${l.screen ? `\n   Ekranda: ${plain(l.screen)}` : ''}`
   })
   // the fixed sign-offs are already approved: listed so the user sees how each cut ends, not to approve again
-  const ends = Object.keys(cfg.formats ?? {}).filter((k) => cfg.formats[k].voice)
-    .map((k) => { const o = outroOf(cfg, k); return `   ${k}: ${o ? plain(spoken(outroText(o).text)) : 'kapanış yok'}` })
+  const ends = Object.keys(cfg.formats ?? {}).filter((k) => outroOf(cfg, k))
+    .map((k) => `   ${k}: ${plain(spoken(outroText(outroOf(cfg, k)).text))}`)
   if (ends.length) out.push(`Sabit kapanış (onaylı, her videoda aynı kayıt):\n${ends.join('\n')}`)
   const hints = lines.flatMap((l) => spoken(l.text).split(' ').filter((w) => CIRCUMFLEX.test(w)))
   console.log(out.join('\n'))
