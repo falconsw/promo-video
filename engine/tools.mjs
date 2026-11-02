@@ -6,6 +6,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync,
 import { homedir } from 'node:os'
 import { basename, join, relative } from 'node:path'
 import { launch, sceneSize } from './render.mjs'
+import { storedKey } from './setup.mjs'
 
 const expand = (p) => p.replace(/^~(?=$|\/)/, homedir())
 const CIRCUMFLEX = /[âîûÂÎÛ]/
@@ -15,8 +16,8 @@ const spoken = (text) => text.replace(/\{[\w-]+\}/g, '').replace(/\s+/g, ' ').tr
 const outputDir = (root, cfg) => (cfg.output ? expand(cfg.output) : join(root, 'out'))
 
 function geminiKey() {
-  const key = process.env.GEMINI_API_KEY || readFileSync(join(homedir(), '.config/gemini/api_key'), 'utf8').trim()
-  if (!key) throw new Error('no Gemini key in $GEMINI_API_KEY or ~/.config/gemini/api_key')
+  const key = storedKey()
+  if (!key) throw new Error('no Gemini API key: `promo.mjs key` asks the user for it')
   return key
 }
 

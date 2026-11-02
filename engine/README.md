@@ -6,6 +6,7 @@ subtitles, every visual keyed to a spoken word) or silent (title cards on fixed 
 
 ```
 P="node ~/.claude/skills/promo-video/engine/promo.mjs"
+$P doctor                     what this machine is missing; $P setup installs it; $P key [--clipboard|--check]
 $P new [dir]                  start a project in dir (default ./promo); never overwrites existing files
 $P capture                    run promo.json "capture" (a script that writes frames/, e.g. ./film.sh)
 $P voices                     the Gemini voices
@@ -24,7 +25,8 @@ $P ios build|record [take…]   iPhone app: copy to src/, prepare, build for a "
 ```
 
 Needs Node 22+, Google Chrome, ffmpeg (`npm install` here once for playwright-core), and for narration uv, an Apple
-Silicon Mac (Whisper runs on MLX) and the Gemini key in `$GEMINI_API_KEY` or `~/.config/gemini/api_key`.
+Silicon Mac (Whisper runs on MLX) and the Gemini key in `$GEMINI_API_KEY` or `~/.config/gemini/api_key`. `setup`
+(setup.mjs) installs all of it; `install.sh` at the repo root bootstraps Homebrew, Node and the skill first.
 
 ## A project
 
@@ -93,7 +95,7 @@ Runtime (`runtime/promokit.js`):
 | `track(keys, t, log)` | eased path through `[time, ...values]` keys; `log` = indices that are zooms |
 | `narration(voice?)` → `N` | `N.cue('gone')`, `N.start('hook')`, `N.end('hook')`, `N.at(line, 'Word')`, `N.duration` |
 | `subtitles(el, N, opts)` | word-by-word subtitles into `#sub`, returns `render(t)` |
-| `backdrop(parent, BACKDROPS.portrait \| landscape \| portrait/landscape + Yellow \| Green \| Red \| Orange)` | drifting blobs and grid, returns `render(t)`; blue is the default, yellow = "sarı olsun", green = AI tools, red = "çok yakında", orange = Claude Studio; the coloured presets also set their base colour (`bg`), orange also the subtitle highlight (`hi`) |
+| `backdrop(parent, BACKDROPS.portrait \| landscape \| portrait/landscape + Yellow \| Green \| Red \| Orange)` | drifting blobs and grid, returns `render(t)`; blue is the default, yellow = "sarı olsun", green = AI tools, red = "çok yakında", orange = Claude-themed videos; the coloured presets also set their base colour (`bg`), orange also the subtitle highlight (`hi`) |
 | `outroCta(stage, N, { lift, liftBy, liftScale, top })` | the fixed sign-off (like, comment, share, save, follow) on the outro line's cues; lifts the end card; no-op without an outro line |
 | `demo(shots, { fit, at, win })` | shot list → frames, camera views, cursor path, clicks |
 | `frameAt`, `show(img, src)`, `orPlaceholder(file, win)` | screenshot sequence |

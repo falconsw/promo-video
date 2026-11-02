@@ -20,9 +20,19 @@ without the user running tools. They watch the result and give notes.
 - `engine/lite/` is a simpler pipeline (`tts.py` → `outro.py` → `build.sh`, scenes driven through
   `window.renderAt(t)`). New videos use `promo.mjs`. See §7.
 
-Requirements: macOS on Apple Silicon (Whisper runs on MLX), Node 22+, Google Chrome, ffmpeg, uv, and a Gemini API key
-(aistudio.google.com/apikey) in `$GEMINI_API_KEY` or `~/.config/gemini/api_key`. If something is missing, tell the
-user exactly what to install.
+Requirements: macOS on Apple Silicon (Whisper runs on MLX), Node 22+, Google Chrome, ffmpeg, uv, the Whisper model
+and a Gemini API key in `$GEMINI_API_KEY` or `~/.config/gemini/api_key`. Set them up yourself, don't send the user
+to install things:
+
+- First video on this machine, or a tool failing as missing: `$P doctor`. Anything ✗ → `$P setup` installs it
+  (Homebrew formulas and Chrome cask, npm, uv's arm64 Python, the ~1.6 GB Whisper model) and asks for the key last.
+- No `node` at all: `bash ~/.claude/skills/promo-video/install.sh` (installs Node, then runs setup).
+- No Homebrew: its installer needs the user's password, so ask them to type the line `setup` prints, with `!` in
+  front, then run `setup` again.
+- No Gemini key: tell the user in one sentence that a free key from aistudio.google.com/apikey is needed and that a
+  macOS dialog will ask for it, then run `$P key` (a hidden-field dialog with an "Anahtar al" button that opens the
+  page; it verifies the key and saves it with mode 600). If they already copied it: `$P key --clipboard`. Never ask
+  for the key in the chat and never print it. `$P key --check` tests the stored one (e.g. after 400/403 errors).
 
 Steps: project → frames → script → **user approves the script** → voice → **user approves the voice** → scene →
 preview → render → hand-off.

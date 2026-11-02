@@ -11,8 +11,13 @@ import { parseArgs } from 'node:util'
 import { KIT, launch, openScene, sceneSize, serve, sheet, stills, video } from './render.mjs'
 import { appstore, check, cover, outroOf, publish, script } from './tools.mjs'
 import { ios } from './ios.mjs'
+import { doctor, key, PYTHON, setup, storedKey } from './setup.mjs'
 
 const HELP = `promo.mjs — promo videos from HTML scenes, optionally narrated
+
+  doctor                     what this machine is missing (Node, Chrome, ffmpeg, uv, Whisper, the Gemini key)
+  setup                      install what is missing (Homebrew formulas, npm, uv Python, Whisper model) and ask for the key
+  key [--clipboard|--check]  store the Gemini key (hidden dialog / prompt, or the clipboard); --check tests the stored one
 
   new [dir]                  start a project in dir (default ./promo): promo.json, scenes/, frames/ (never overwrites)
   capture                    run promo.json "capture" (a script that writes frames/, e.g. ./film.sh)
@@ -39,7 +44,7 @@ const fail = (msg) => { console.error(`promo: ${msg}`); process.exit(1) }
 
 const { values: opt, positionals } = parseArgs({
   allowPositionals: true,
-  options: { voice: { type: 'string' }, lines: { type: 'string' }, jobs: { type: 'string' }, fps: { type: 'string' }, png: { type: 'boolean' }, again: { type: 'boolean' }, country: { type: 'string' }, help: { type: 'boolean', short: 'h' } }
+  options: { voice: { type: 'string' }, lines: { type: 'string' }, jobs: { type: 'string' }, fps: { type: 'string' }, png: { type: 'boolean' }, again: { type: 'boolean' }, clipboard: { type: 'boolean' }, check: { type: 'boolean' }, country: { type: 'string' }, help: { type: 'boolean', short: 'h' } }
 })
 const [cmd, ...args] = positionals
 if (!cmd || opt.help || cmd === 'help') { console.log(HELP); process.exit(0) }
@@ -67,9 +72,10 @@ function format(cfg, name) {
 
 // The voice step runs under uv with the arm64 interpreter: MLX (Whisper) needs it, and uv may be an x86_64 build.
 function voice(root, extra = []) {
-  const r = spawnSync('uv', ['run', '--quiet', '--no-project', '--python', 'cpython-3.12-macos-aarch64-none', '--with', 'mlx-whisper',
+  if (!storedKey()) fail('no Gemini API key: `promo.mjs key` asks the user for it (or `setup` for everything)')
+  const r = spawnSync('uv', ['run', '--quiet', '--no-project', '--python', PYTHON, '--with', 'mlx-whisper',
     join(KIT, 'voice.py'), ...extra], { cwd: root, stdio: 'inherit' })
-  if (r.error) fail(`uv: ${r.error.message}`)
+  if (r.error) fail(`uv: ${r.error.message} (\`promo.mjs setup\` installs it)`)
   if (r.status !== 0) process.exit(r.status ?? 1)
 }
 
@@ -168,10 +174,13 @@ function scaffold(dir) {
   console.log(`${name} → ${relative(process.cwd(), dest) || '.'}/: ${written.sort().join(', ')}`)
 }
 
-const { root, cfg } = cmd === 'new' || cmd === 'voices' ? {} : load()
+const { root, cfg } = ['new', 'voices', 'doctor', 'setup', 'key'].includes(cmd) ? {} : load()
 const formats = (name) => (!name || name === 'all' ? Object.keys(cfg.formats ?? {}) : [name]).map((n) => format(cfg, n))
 
 switch (cmd) {
+  case 'doctor': process.exit(doctor() ? 0 : 1)
+  case 'setup': process.exit((await setup()) ? 0 : 1)
+  case 'key': process.exit((await key({ clipboard: opt.clipboard, check: opt.check })) ? 0 : 1)
   case 'new': scaffold(args[0]); break
   case 'voices': voice(process.cwd(), ['--list']); break
   case 'capture': {

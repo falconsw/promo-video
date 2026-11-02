@@ -9,18 +9,25 @@ YouTube / TikTok / X paylaşım metinlerini de hazırlar.
 
 ## Kurulum
 
+Terminale tek satır:
+
 ```sh
-git clone https://github.com/<kullanici>/promo-video ~/.claude/skills/promo-video
-cd ~/.claude/skills/promo-video/engine && npm install
+curl -fsSL https://raw.githubusercontent.com/falconsw/promo-video/main/install.sh | bash
 ```
 
-Gerekenler:
+Kurulum betiği eksik olanı kendisi kurar ve var olana dokunmaz: Homebrew (şifrenizi bir kez sorar), Node 22+,
+ffmpeg, uv, Google Chrome, Playwright, Whisper için arm64 Python ve Whisper modeli (~1,6 GB). En sonda Gemini API
+anahtarını gizli bir alanda ister. Anahtarınız yoksa çıkan pencerede "Anahtar al" düğmesi
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey) sayfasını açar (ücretsiz). Anahtar doğrulanır ve
+yalnızca sizin okuyabileceğiniz `~/.config/gemini/api_key` dosyasına yazılır (`$GEMINI_API_KEY` de olur).
+Güncellemek için aynı satırı yeniden çalıştırın.
 
-- macOS, Apple Silicon (Whisper MLX üzerinde çalışır)
-- Node 22+, Google Chrome, ffmpeg, [uv](https://docs.astral.sh/uv/)
-- Gemini API anahtarı ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)): `$GEMINI_API_KEY`
-  ortam değişkenine ya da `~/.config/gemini/api_key` dosyasına yazın. Ücretsiz katmanda Google gönderilen metni
-  kullanabilir, bu yüzden yalnızca herkese açık tanıtım metinleri gönderilir.
+Repoyu klonladıysanız klasörde `./install.sh` çalıştırın; klonunuz `~/.claude/skills/promo-video` altına bağlanır.
+Kurulumu hiç yapmasanız da sorun olmaz: Claude ilk videoda eksikleri `promo.mjs doctor` ile görür, `setup` ile
+kurar, anahtar eksikse sizden bir pencereyle ister.
+
+Gerekenler: macOS ve Apple Silicon (Whisper MLX üzerinde çalışır). **Windows ve Linux desteği yakında.** Ücretsiz katmanda Google gönderilen metni
+kullanabilir, bu yüzden yalnızca herkese açık tanıtım metinleri gönderilir.
 
 ## Kullanım
 

@@ -321,8 +321,8 @@ const typed = (s, t, a, cps = 40) => s.slice(0, Math.max(0, Math.floor((t - a) *
 const pad = (n, w = 4) => String(n).padStart(w, '0')
 const show = (el, o, tf = '') => { el.style.opacity = o; el.style.transform = tf; el.style.visibility = o <= 0.001 ? 'hidden' : 'visible' }
 
-// the wall: 3×3 tiles, Folderpad (v4) in the middle; frames/wall/v<i>/NNN.jpg are 30 fps stills of each finished promo
-const WALL = ['Leftover', 'MiniMax', 'Nabız', 'Dürücü', 'Folderpad', 'Kestirme', 'Notla', 'Sentic', 'Launchset']
+// the wall: 3×3 tiles, the hero app (v4) in the middle; frames/wall/v<i>/NNN.jpg are 30 fps stills of each finished promo
+const WALL = ['Uygulama 1', 'Uygulama 2', 'Uygulama 3', 'Uygulama 4', 'Uygulama 5', 'Uygulama 6', 'Uygulama 7', 'Uygulama 8', 'Uygulama 9']
 const TW = 300, TH = 533, GAP = 36, WCX = 540, WCY = 760, FOCUS_Y = 740
 const NODE_X = [160, 350, 540, 730, 920]
 const LABELS = ['Senaryo', 'Ses', 'Zamanlama', 'Render', 'Yayın']
