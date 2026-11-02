@@ -1,0 +1,18 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&display=block" rel="stylesheet">
+<style>
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#0b0f1e;font-family:'Bricolage Grotesque',sans-serif}
+.blob{position:absolute;border-radius:50%;filter:blur(160px)}
+.panel{position:absolute;left:50%;top:1010px;width:960px;transform:translateX(-50%);border-radius:32px;box-shadow:0 60px 160px #000c,0 0 0 2px #ffffff1f}
+.shade{position:absolute;left:0;right:0;top:0;height:1000px;background:linear-gradient(#0b0c1ef2 0%,#0b0c1ecc 60%,#0b0c1e00 100%)}
+.t{position:absolute;left:60px;right:60px;top:190px;text-align:center}
+.pill{display:inline-block;background:#FFC23A;color:#111318;font-weight:800;font-size:46px;letter-spacing:2px;padding:12px 30px;border-radius:999px}
+.l{white-space:nowrap;font-weight:800;font-size:176px;line-height:.98;letter-spacing:-3px;color:#F5F2EA;text-shadow:0 6px 30px #000a}
+.l1{margin-top:34px}.l3{color:var(--hi,#aab6ff)}  /* the backdrop's subtitle colour (SKILL.md §5) */
+</style></head><body>
+<div class="blob" style="width:900px;height:900px;left:-300px;top:900px;background:#3340d6;opacity:.5"></div>
+<div class="blob" style="width:760px;height:760px;left:520px;top:1300px;background:#8a2fc7;opacity:.4"></div>
+<img class="panel" src="panel.png"><div class="shade"></div>
+<div class="t"><div class="pill">macOS uygulaması</div><div class="l l1">YAPAY ZEKA</div><div class="l">LİMİTİN NE</div><div class="l l3">KADAR KALDI?</div></div>
+<script>document.fonts.ready.then(()=>{let s=176;const ls=[...document.querySelectorAll('.l')];while(s>90&&ls.some(e=>e.scrollWidth>960)){s-=4;ls.forEach(e=>e.style.fontSize=s+'px')}window.done=1})</script>
+</body></html>

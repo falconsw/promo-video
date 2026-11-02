@@ -1,0 +1,8 @@
+{
+  "name": "promo-video-engine",
+  "private": true,
+  "description": "Engine of the promo-video skill: HTML scenes rendered frame by frame, optional AI narration with word-synced subtitles",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "dependencies": { "playwright-core": "1.64.1" }
+}

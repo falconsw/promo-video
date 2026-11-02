@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Folderpad TikTok</title>
+<style>
+  /* 1080×1920. TikTok covers the top ~200 px, the bottom ~420 px and a right rail (x > 960, y 800–1500),
+     so the action stays in y 200–1200 and the subtitles sit around y 1330, nudged left of the rail. */
+  :root { --bg: #070818; --accent: #9aa8ff; --hi: #aab6ff; }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: var(--bg);
+    font-family: -apple-system, "SF Pro Display", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(150px); }
+  #grid { position: absolute; inset: 0; opacity: .45;
+    background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 64px 64px; -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%); }
+
+  /* Launchpad-style page of the hook */
+  .gi { position: absolute; left: 0; top: 0; width: 200px; display: flex; flex-direction: column; align-items: center; transform-origin: 100px 75px; }
+  .gi img { width: 150px; height: 150px; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
+  .gi span { margin-top: 8px; color: rgba(255,255,255,.92); font-size: 26px; font-weight: 500; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+
+  /* the app window: 1280×800 pt, frames are 2×; it fades out above the subtitle band */
+  #winwrap { position: absolute; inset: 0; -webkit-mask-image: linear-gradient(#000 1120px, transparent 1250px); }
+  #win { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; transform-origin: 0 0; border-radius: 16px;
+    box-shadow: 0 50px 140px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.10); opacity: 0; }
+  #win img { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; border-radius: 16px; }
+  .cursor { position: absolute; left: 0; top: 0; width: 26px; height: 38px; transform-origin: 3px 3px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+  .ripple { position: absolute; left: 0; top: 0; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%;
+    border: 3px solid #7c8cff; background: rgba(124,140,255,.2); box-sizing: border-box; opacity: 0; }
+
+  /* macOS 26 Dock */
+  #dock { position: absolute; left: 520px; top: 1100px; display: flex; align-items: flex-end; padding: 10px 12px; border-radius: 32px;
+    background: rgba(255,255,255,.13); backdrop-filter: blur(30px) saturate(1.6);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 0 0 1px rgba(255,255,255,.18), 0 20px 60px rgba(0,0,0,.45);
+    opacity: 0; transform-origin: 50% 100%; }
+  .tile { position: relative; width: 96px; height: 92px; flex: none; }
+  .tile img { position: absolute; left: 6px; bottom: 4px; width: 84px; height: 84px; transform-origin: 50% 100%; }
+  .tile .run { position: absolute; left: 46px; bottom: -6px; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.8); }
+  .sep { width: 1px; height: 70px; margin: 0 12px 11px; background: rgba(255,255,255,.35); flex: none; }
+  #tip { position: absolute; padding: 7px 16px; border-radius: 10px; font-size: 24px; font-weight: 600; color: #fff;
+    background: rgba(40,40,48,.85); backdrop-filter: blur(20px); box-shadow: 0 6px 20px rgba(0,0,0,.35); opacity: 0; white-space: nowrap; }
+  #menu { position: absolute; width: 270px; padding: 8px; box-sizing: border-box; border-radius: 16px; color: #fff; font-size: 24px; font-weight: 500;
+    background: rgba(44,44,56,.82); backdrop-filter: blur(30px) saturate(1.6); transform-origin: 50% 100%; opacity: 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 18px 50px rgba(0,0,0,.5); }
+  #menu div { padding: 7px 14px; border-radius: 8px; }
+  #menu hr { border: 0; border-top: 1px solid rgba(255,255,255,.14); margin: 6px 8px; }
+  #menu .quit { background: #2f6bff; }
+
+  /* Dock grid stack, opened from a group */
+  #pop { position: absolute; width: 720px; padding: 24px 28px 20px; box-sizing: border-box; border-radius: 30px; color: #fff;
+    background: rgba(36,36,48,.62); backdrop-filter: blur(40px) saturate(1.7);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 0 0 1px rgba(255,255,255,.14), 0 30px 80px rgba(0,0,0,.5);
+    transform-origin: 50% 100%; opacity: 0; }
+  #pop h2 { margin: 0 0 16px; text-align: center; font-size: 30px; font-weight: 700; letter-spacing: -.3px; }
+  #pop .apps { display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 16px; }
+  #pop .app { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 19px; font-weight: 500; color: #eef; text-align: center; }
+  #pop .app img { width: 100px; height: 100px; }
+  #pop .foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.14); text-align: center; font-size: 20px; color: #c9ccff; }
+  #pop .tail { position: absolute; left: 50%; bottom: -12px; width: 24px; height: 24px; margin-left: -12px; transform: rotate(45deg);
+    background: rgba(36,36,48,.62); box-shadow: inset -1px -1px 0 rgba(255,255,255,.14); }
+
+  .brand { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; opacity: 0; }
+  .brand img { width: 300px; height: 300px; }
+  .brand .word { color: #fff; font-size: 140px; font-weight: 800; letter-spacing: -4px; margin-top: -6px; }
+  .brand .glow { position: absolute; top: -60px; width: 640px; height: 520px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(110,120,255,.5), rgba(110,120,255,0)); }
+  .pills { display: flex; flex-direction: column; align-items: center; gap: 18px; margin-top: 40px; }
+  .pill { padding: 16px 30px; border-radius: 999px; font-size: 38px; font-weight: 650; color: #fff; opacity: 0;
+    background: rgba(20,22,52,.78); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35); display: flex; align-items: center; gap: 12px; }
+  .pill code { font: 600 28px ui-monospace, "SF Mono", Menlo, monospace; color: #d9dcff; font-variant-ligatures: none; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+
+  /* word-by-word subtitles */
+  #sub { position: absolute; left: 70px; width: 900px; top: 1330px; transform: translateY(-50%); text-align: center;
+    font-size: 78px; font-weight: 800; line-height: 1.08; letter-spacing: -1px; color: #fff;
+    -webkit-text-stroke: 14px rgba(5,6,20,.92); paint-order: stroke fill; }
+  #sub span { display: inline-block; transform-origin: 50% 60%; }
+  #sub span.on { color: var(--hi); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="blob" id="b1" style="width:900px;height:900px;background:#3340d6"></div>
+  <div class="blob" id="b2" style="width:760px;height:760px;background:#8a2fc7"></div>
+  <div class="blob" id="b3" style="width:620px;height:620px;background:#1e7fbf"></div>
+  <div id="grid"></div>
+
+  <div id="page"></div>
+
+  <div class="brand" id="intro" style="top:470px">
+    <div class="glow"></div>
+    <img src="icon.png" alt="">
+    <div class="word">Folderpad</div>
+  </div>
+
+  <div id="winwrap"><div id="win">
+    <img id="imgA" alt="">
+    <div class="ripple" id="r1"></div><div class="ripple" id="r2"></div>
+    <svg class="cursor" id="cursor" viewBox="0 0 26 38"><path d="M3 3 L3 29 L9.5 23 L13.8 33.2 L18.3 31.3 L14.1 21.4 L22.8 21.4 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+  </div></div>
+
+  <div id="dock"></div>
+  <div id="pop"><h2>Developer</h2><div class="apps"></div><div class="foot">Open in Finder ›</div><div class="tail"></div></div>
+  <div id="menu"><div>Show All Windows</div><div>Hide</div><hr><div class="quit">Quit</div></div>
+  <div id="tip">Developer</div>
+  <div class="ripple" id="r3"></div>
+  <svg class="cursor" id="cursor2" viewBox="0 0 26 38"><path d="M3 3 L3 29 L9.5 23 L13.8 33.2 L18.3 31.3 L14.1 21.4 L22.8 21.4 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+
+  <div class="brand" id="outro" style="top:330px">
+    <div class="glow"></div>
+    <img src="icon.png" alt="">
+    <div class="word">Folderpad</div>
+    <div class="pills">
+      <div class="pill"><span class="dot" style="background:#9aa8ff"></span>github.com/falconsw/folderpad</div>
+      <div class="pill"><code>brew install --cask falconsw/tap/folderpad</code></div>
+    </div>
+  </div>
+
+  <div id="sub"></div>
+</div>
+
+<script>
+// ---------- helpers ----------
+const $ = (id) => document.getElementById(id)
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v))
+const lerp = (a, b, k) => a + (b - a) * k
+const E = {
+  out: (k) => 1 - Math.pow(1 - k, 3),
+  inOut: (k) => (k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2),
+  outBack: (k) => { const c = 1.6; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2) },
+  in: (k) => k * k * k
+}
+const p = (t, a, b, e = E.out) => e(clamp((t - a) / (b - a)))
+const life = (t, a, b, c, d, e = E.out) => Math.min(p(t, a, b, e), 1 - p(t, c, d, E.inOut))
+const rnd = (i, k) => { const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x) }
+// piecewise path through [time, ...values] keys, eased between neighbours
+function track(keys, t) {
+  let i = keys.findIndex(([kt]) => kt > t)
+  if (i === -1) return keys.at(-1).slice(1)
+  if (i === 0) return keys[0].slice(1)
+  const a = keys[i - 1], b = keys[i], k = E.inOut(clamp((t - a[0]) / (b[0] - a[0])))
+  return a.slice(1).map((v, j) => typeof v === 'number' ? lerp(v, b[j + 1], k) : v)
+}
+
+// Points measured on 1100-px-wide previews of the 1280-pt window.
+const P = (x, y) => ({ x: x * 1280 / 1100, y: y * 1280 / 1100 })
+const AT = {
+  suggest: P(365, 157), create: P(762, 585), social: P(57, 202), plus: P(1033, 22),
+  search: P(550, 152), add: P(721, 568)
+}
+// camera: window point (fx, fy) lands on screen (px, py) at scale s px/pt
+const view = (s, at, px = 540, py = 700) => [s, at.x, at.y, px, py]
+
+const CX = 540, BRAND_Y = 620  // centre of the Folderpad icon in the intro
+const GRID = [
+  ['app-safari', 'Safari'], ['group-developer', 'Developer'], ['app-messages', 'Messages'], ['app-mail', 'Mail'],
+  ['app-music', 'Music'], ['app-notes', 'Notes'], ['group-ai', 'AI'], ['app-calendar', 'Calendar'],
+  ['app-photos', 'Photos'], ['group-productivity', 'Productivity'], ['app-facetime', 'FaceTime'], ['app-telegram', 'Telegram'],
+  ['app-whatsapp', 'WhatsApp'], ['app-chatgpt', 'ChatGPT'], ['app-xcode', 'Xcode'], ['group-social', 'Social']
+]
+
+let T = {}, FRAMES = [], VIEWS = [], CURSOR = [], CLICKS = [], CHUNKS = [], PAGE = [], DOCK = [], FP = null
+window.SIZE = { width: 1080, height: 1920 }
+
+async function setup() {
+  const voice = new URLSearchParams(location.search).get('voice') ?? 'tr-TR-AhmetNeural'
+  const N = await (await fetch(`narration/${voice}/words.json`)).json()
+  const TL = await (await fetch('frames/timeline.json')).json()
+  const M = await (await fetch('frames/manifest.json')).json()
+  window.DURATION = N.duration
+
+  // ----- narration clock: w(line, word) = when that word starts, e(line) = when the line's speech ends
+  const L = N.lines
+  const w = (i, j) => L[i].start + L[i].words[j].start
+  const e = (i) => L[i].start + L[i].words.at(-1).end
+  const at = (i, text) => {  // start of the first word in line i that begins with text
+    const j = L[i].words.findIndex((x) => x.text.startsWith(text))
+    if (j < 0) throw new Error(`line ${i} has no word starting with ${text}`)
+    return w(i, j)
+  }
+  T = { w, e, at, s: (i) => L[i].start }
+
+  // ----- subtitles: up to 3 words / 17 chars per chunk, always breaking after punctuation
+  for (const line of L) {
+    let cur = []
+    const flush = () => { if (cur.length) CHUNKS.push(cur); cur = [] }
+    for (const wd of line.words) {
+      const word = { text: wd.text, a: line.start + wd.start, b: line.start + wd.end }
+      if (cur.length && (cur.length >= 3 || [...cur, word].map((x) => x.text).join(' ').length > 17)) flush()
+      cur.push(word)
+      if (/[.,:;!?]$/.test(wd.text)) flush()
+    }
+    flush()
+  }
+  CHUNKS.forEach((c, i) => { c.a = c[0].a; c.b = Math.min(CHUNKS[i + 1]?.[0].a ?? Infinity, c.at(-1).b + .45) })
+
+  // ----- hook: a Launchpad page that wiggles on "Launchpad", falls on "gitti", folders go on "klasörleri"
+  const page = $('page')
+  GRID.forEach(([icon, name], i) => {
+    const el = document.createElement('div')
+    el.className = 'gi'
+    el.innerHTML = `<img src="frames/icons/${icon}.png" alt=""><span>${name}</span>`
+    page.append(el)
+    const folder = icon.startsWith('group')
+    PAGE.push({ el, x: 195 + (i % 4) * 230, y: 400 + Math.floor(i / 4) * 235,
+      fall: (folder ? at(0, 'klasörleri') : at(0, 'gitti')) + rnd(i, 1) * (folder ? .2 : .35),
+      vx: (rnd(i, 2) - .5) * 520, vr: (rnd(i, 3) - .5) * 420,
+      back: at(1, 'geri') + i * .035 })   // "geri getiren": they fly back into the Folderpad icon
+  })
+  T.brandIn = PAGE.at(-1).back + .5
+
+  // ----- window scenes
+  const frames = TL.frames
+  const one = (tag) => frames.find((f) => f.tag === tag).file
+  const tWin = T.s(2) - .25
+  const tS = at(2, 'tek') + .3               // "tek tıkla" → Suggest Groups…
+  const tDev = at(2, 'geliştirici'), tAI = at(2, 'yapay'), tProd = at(2, 'üretkenlik')
+  const tC = e(2) + .35                 // Create Groups
+  const tSoc = tC + .75, tPlus = tSoc + .5, tSearch = tPlus + .3
+  let t = tSearch + .1
+  FRAMES.push([0, one('apps')], [tS + .08, one('suggest')], [tC + .1, one('created')], [tSoc + .1, one('group')], [tPlus + .1, one('picker')])
+  for (const f of frames.filter((f) => f.scene === 's2' && ['type', 'pick'].includes(f.tag))) {
+    FRAMES.push([t, f.file]); t += f.tag === 'type' ? .05 : .14
+  }
+  const tPicked = t, tAdd = tPicked + .3
+  FRAMES.push([tPicked, one('picked')], [tAdd + .1, one('added')])
+  T.win = { in: tWin, out: T.s(5) - .5 }
+
+  const a = AT
+  const apps0 = view(.95, { x: 640, y: 400 }), suggestV = view(1.7, P(420, 160), 540, 640)
+  const sheetV = view(1.55, P(550, 343)), createV = view(1.6, P(640, 520))
+  const rowV = (y) => view(1.75, P(550, y))
+  const sidebarV = view(2, P(110, 190)), headerV = view(1.25, P(700, 220))
+  const pickerV = view(1.95, P(550, 300)), pickerLowV = view(1.95, P(560, 470))
+  const iconV = view(2.5, P(320, 108), 540, 660), iconV2 = view(2.7, P(320, 108), 540, 660)
+  VIEWS = [[0, ...apps0], [tWin + .5, ...apps0], [tS - .15, ...suggestV], [tS + .12, ...suggestV], [tS + .65, ...sheetV],
+    [tDev - .2, ...sheetV], [tDev + .25, ...rowV(225)], [tAI - .2, ...rowV(225)], [tAI + .25, ...rowV(322)],
+    [tProd - .2, ...rowV(322)], [tProd + .25, ...rowV(420)], [tC - .4, ...createV], [tC + .25, ...createV],
+    [tC + .75, ...sidebarV], [tSoc + .15, ...sidebarV], [tPlus - .1, ...headerV], [tPlus + .15, ...headerV],
+    [tSearch + .25, ...pickerV], [tPicked - .2, ...pickerV], [tAdd - .1, ...pickerLowV], [tAdd + .15, ...pickerLowV],
+    [tAdd + .75, ...iconV], [T.win.out + .7, ...iconV2]]
+
+  // cursor in window points: [time, x, y, visible]
+  CURSOR = [
+    [tS - .9, 760, 520, 0], [tS - .7, 760, 520, 1], [tS - .1, a.suggest.x, a.suggest.y, 1], [tS + .3, a.suggest.x, a.suggest.y, 1], [tS + .5, a.suggest.x, a.suggest.y, 0],
+    [tC - .75, a.create.x - 160, a.create.y - 90, 0], [tC - .6, a.create.x - 160, a.create.y - 90, 1], [tC - .08, a.create.x, a.create.y, 1],
+    [tC + .2, a.create.x, a.create.y, 1], [tSoc - .08, a.social.x, a.social.y, 1], [tSoc + .1, a.social.x, a.social.y, 1],
+    [tPlus - .08, a.plus.x, a.plus.y, 1], [tPlus + .1, a.plus.x, a.plus.y, 1], [tSearch - .05, a.search.x, a.search.y, 1],
+    [tSearch + .1, a.search.x, a.search.y, 1], [tSearch + .25, a.search.x, a.search.y, 0],
+    [tPicked - .35, a.add.x - 140, a.add.y - 90, 0], [tPicked - .2, a.add.x - 140, a.add.y - 90, 1], [tAdd - .08, a.add.x, a.add.y, 1],
+    [tAdd + .25, a.add.x, a.add.y, 1], [tAdd + .45, a.add.x, a.add.y, 0]
+  ]
+  CLICKS = [[tS, a.suggest], [tC, a.create], [tSoc, a.social], [tPlus, a.plus], [tSearch, a.search], [tAdd, a.add]]
+
+  // ----- Dock: a few apps, Folderpad itself (running), then the groups
+  const dock = $('dock')
+  const tile = (src, run) => {
+    const el = document.createElement('div')
+    el.className = 'tile'
+    el.innerHTML = `<img src="${src}" alt="">${run ? '<div class="run"></div>' : ''}`
+    dock.append(el)
+    return el
+  }
+  for (const name of ['Finder', 'Safari', 'Messages']) tile('frames/' + M.dockApps.find((x) => x.name === name).icon, true)
+  FP = tile('icon.png', true)
+  const sep = document.createElement('div'); sep.className = 'sep'; dock.append(sep)
+  for (const name of ['Developer', 'AI', 'Productivity', 'Utilities', 'Social']) DOCK.push(tile('frames/' + M.groups.find((g) => g.name === name).icon))
+  const dev = M.groups.find((g) => g.name === 'Developer')
+  document.querySelector('#pop .apps').innerHTML = dev.apps.map((app) =>
+    `<div class="app"><img src="frames/${app.icon}" alt=""><span>${app.name}</span></div>`).join('')
+  T.dock = { in: T.s(5) - .25, groups: at(5, 'klasörler'), click: at(5, 'geliyor') + .05, menu: at(6, "Folderpad'i") - .05,
+    quit: at(6, 'kapatsan'), stay: at(6, 'yerinde'), out: e(6) + .25 }
+
+  await Promise.all([...document.images].map((img) => img.decode().catch(() => {})))
+}
+
+async function show(img, file) {
+  const src = 'frames/' + file
+  if (img.dataset.src === src) return
+  img.dataset.src = src
+  img.src = src
+  await img.decode()
+}
+
+function brand(el, t, a) {
+  el.querySelector('img').style.transform = `scale(${lerp(.55, 1, p(t, a, a + .7, E.outBack))})`
+  el.querySelector('.glow').style.opacity = p(t, a + .1, a + 1)
+}
+
+function word(el, t, a) {
+  el.style.cssText = `opacity:${p(t, a, a + .4)};transform:translateY(${(1 - p(t, a, a + .5)) * 36}px)`
+}
+
+window.renderAt = async function (t) {
+  $('b1').style.transform = `translate(${-380 + 80 * Math.sin(t * .3)}px, ${-260 + 70 * Math.cos(t * .25)}px)`
+  $('b2').style.transform = `translate(${480 + 70 * Math.cos(t * .28)}px, ${1050 + 80 * Math.sin(t * .3)}px)`
+  $('b3').style.transform = `translate(${160 + 110 * Math.sin(t * .2)}px, ${420 + 60 * Math.sin(t * .35)}px)`
+  $('b1').style.opacity = .5; $('b2').style.opacity = .4; $('b3').style.opacity = .3
+  const { e, at, s } = T
+
+  // ---- hook: Launchpad page
+  const settle = lerp(1.06, 1, p(t, 0, 1.4))
+  PAGE.forEach((g, i) => {
+    let x = g.x, y = g.y, r = 0, sc = settle, o = 1
+    const wig = p(t, at(0, 'Launchpad'), at(0, 'Launchpad') + .15)
+    r = wig * 3 * Math.sin(t * 30 + i * 1.7)
+    const fallAt = (tt) => { const d = Math.max(0, tt - g.fall); return { x: g.x + g.vx * d, y: g.y - 650 * d + 2900 * d * d, r: r + g.vr * d } }
+    if (t >= g.fall) ({ x, y, r } = fallAt(t))
+    if (t >= g.back) {
+      const from = fallAt(g.back), k = p(t, g.back, g.back + .55, E.inOut)
+      x = lerp(from.x, CX, k); y = lerp(Math.min(from.y, 2200), BRAND_Y, k); r = lerp(from.r % 360, 0, k)
+      sc = lerp(1, .25, k); o = k < .8 ? 1 : 1 - (k - .8) / .2
+    }
+    g.el.style.opacity = o
+    g.el.style.transform = `translate(${x - 100}px, ${y - 75}px) rotate(${r}deg) scale(${sc})`
+  })
+
+  // ---- intro brand: assembles from the returning icons, name lands on "Folderpad"
+  const intro = $('intro'), bOut = p(t, e(1) + .1, e(1) + .5, E.inOut)
+  intro.style.opacity = Math.min(p(t, T.brandIn - .15, T.brandIn), 1 - bOut)
+  intro.style.transform = `translateY(${-70 * bOut}px) scale(${lerp(1, .9, bOut)})`
+  brand(intro, t, T.brandIn - .15)
+  word(intro.querySelector('.word'), t, at(1, 'Folderpad') - .05)
+
+  // ---- window + camera
+  const win = $('win')
+  const enter = p(t, T.win.in, T.win.in + .8), exit = p(t, T.win.out, T.win.out + .6, E.inOut)
+  const [cs, fx, fy, px, py] = track(VIEWS, t)
+  const sc = cs * lerp(.86, 1, enter) * lerp(1, .85, exit)
+  win.style.transform = `translate(${px - fx * sc}px, ${py - fy * sc + (1 - enter) * 260 - exit * 120}px) scale(${sc})`
+  win.style.opacity = Math.min(enter * 1.4, 1 - exit)
+  win.style.filter = exit > 0 ? `blur(${exit * 10}px)` : 'none'
+  if (enter > 0 && exit < 1) {
+    let f = FRAMES[0][1]; for (const [ft, file] of FRAMES) if (ft <= t) f = file
+    await show($('imgA'), f)
+  }
+
+  const [cx, cy, co] = track(CURSOR, t)
+  let press = 0
+  for (const [ct] of CLICKS) press = Math.max(press, 1 - Math.abs(t - ct) / .09)
+  $('cursor').style.transform = `translate(${cx - 3}px, ${cy - 3}px) scale(${1.3 / cs * (1 - .16 * clamp(press))})`
+  $('cursor').style.opacity = co
+  const rips = [$('r1'), $('r2')]
+  let ri = 0
+  for (const [ct, pt] of CLICKS) {
+    const k = (t - ct) / .55
+    if (k < 0 || k > 1 || ri > 1) continue
+    const rp = rips[ri++]
+    rp.style.opacity = (1 - k) * .9
+    rp.style.transform = `translate(${pt.x}px, ${pt.y}px) scale(${lerp(.3, 1.6, E.out(k)) * 1.3 / cs})`
+  }
+  for (; ri < 2; ri++) rips[ri].style.opacity = 0
+
+  // ---- Dock: groups appear, Developer opens, Folderpad quits and the groups stay
+  const D = T.dock, dock = $('dock')
+  const dIn = p(t, D.in, D.in + .6), dOut = p(t, D.out, D.out + .45, E.inOut)
+  dock.style.opacity = Math.min(dIn, 1 - dOut)
+  dock.style.transform = `translateX(-50%) translateY(${(1 - dIn) * 200 + dOut * 200}px) scale(1.04)`
+  DOCK.forEach((el, i) => {
+    const a = D.groups + i * .12
+    const hop = Math.sin(clamp((t - D.stay - i * .07) / .45) * Math.PI) * 22
+    el.style.width = `${96 * clamp(p(t, a, a + .4))}px`
+    const hover = i === 0 ? life(t, D.click - .45, D.click - .3, D.menu - .3, D.menu - .1) : 0
+    el.querySelector('img').style.transform = `translateY(${-hop - 6 * hover}px) scale(${Math.max(0, p(t, a, a + .55, E.outBack)) * (1 + .2 * hover)})`
+  })
+  const gone = p(t, D.quit + .12, D.quit + .55, E.inOut)
+  FP.style.width = `${96 * (1 - gone)}px`
+  FP.querySelector('img').style.transform = `scale(${1 - gone})`
+  FP.querySelector('.run').style.opacity = 1 - p(t, D.quit, D.quit + .15)
+
+  const dr = DOCK[0].getBoundingClientRect(), fr = FP.getBoundingClientRect()
+  const devAt = { x: dr.left + dr.width / 2, y: dr.top + dr.height * .45 }
+  const fpAt = { x: fr.left + fr.width / 2, y: fr.top + fr.height * .45 }
+  const menuItem = { x: fpAt.x, y: fr.top - 62 }
+  const C2 = [[D.groups + .2, 760, 900, 0], [D.groups + .35, 760, 900, 1], [D.click - .1, devAt.x, devAt.y, 1], [D.menu - .4, devAt.x, devAt.y, 1],
+    [D.menu - .05, fpAt.x, fpAt.y, 1], [D.quit - .3, fpAt.x, fpAt.y, 1], [D.quit - .05, menuItem.x, menuItem.y, 1],
+    [D.quit + .3, menuItem.x, menuItem.y, 1], [D.quit + .5, menuItem.x, menuItem.y, 0]]
+  const [c2x, c2y, c2o] = track(C2, t)
+  const click2 = Math.max(1 - Math.abs(t - D.click) / .09, 1 - Math.abs(t - D.quit) / .09)
+  $('cursor2').style.transform = `translate(${c2x - 3}px, ${c2y - 3}px) scale(${1.7 * (1 - .16 * clamp(click2))})`
+  $('cursor2').style.opacity = t < D.in ? 0 : c2o
+  const rk = (t - D.click) / .6
+  $('r3').style.opacity = rk >= 0 && rk <= 1 ? (1 - rk) * .9 : 0
+  $('r3').style.transform = `translate(${devAt.x}px, ${devAt.y}px) scale(${lerp(.3, 1.8, E.out(clamp(rk)))})`
+
+  const tip = $('tip')
+  tip.style.opacity = life(t, D.click - .35, D.click - .2, D.click - .05, D.click + .05)
+  tip.style.left = `${devAt.x - tip.offsetWidth / 2}px`
+  tip.style.top = `${dr.top - 70}px`
+
+  const pop = $('pop')
+  const popK = Math.min(p(t, D.click + .07, D.click + .55, E.outBack), 1 - p(t, D.menu - .4, D.menu - .15, E.inOut))
+  pop.style.opacity = clamp(Math.min(p(t, D.click + .07, D.click + .3), 1 - p(t, D.menu - .4, D.menu - .15, E.inOut)))
+  pop.style.left = `${clamp(devAt.x - 360, 40, 1040 - 720)}px`
+  pop.style.top = `${dr.top - 28 - pop.offsetHeight}px`
+  pop.style.transform = `scale(${lerp(.4, 1, popK)})`
+  pop.querySelector('.tail').style.left = `${devAt.x - clamp(devAt.x - 360, 40, 320)}px`
+  pop.querySelectorAll('.app').forEach((el, i) => {
+    const k = p(t, D.click + .2 + i * .05, D.click + .65 + i * .05)
+    el.style.opacity = k
+    el.style.transform = `translateY(${(1 - k) * 18}px)`
+  })
+
+  const menu = $('menu')
+  const mK = Math.min(p(t, D.menu, D.menu + .3, E.outBack), 1 - p(t, D.quit + .05, D.quit + .25, E.inOut))
+  menu.style.opacity = clamp(Math.min(p(t, D.menu, D.menu + .15), 1 - p(t, D.quit + .05, D.quit + .25)))
+  menu.style.left = `${fpAt.x - 135}px`
+  menu.style.top = `${fr.top - 20 - menu.offsetHeight}px`
+  menu.style.transform = `scale(${lerp(.6, 1, mK)})`
+  menu.querySelector('.quit').style.background = t >= D.quit - .25 ? '#2f6bff' : 'transparent'
+
+  // ---- outro
+  const s5 = s(7)
+  const outro = $('outro')
+  outro.style.opacity = p(t, s5 - .2, s5 + .25)
+  brand(outro, t, s5 - .2)
+  word(outro.querySelector('.word'), t, s5)
+  outro.querySelectorAll('.pill').forEach((el, i) => {
+    const a = at(7, 'GitHub') - .1 + i * .25
+    el.style.opacity = p(t, a, a + .4)
+    el.style.transform = `translateY(${(1 - p(t, a, a + .5, E.outBack)) * 30}px)`
+  })
+
+  // ---- subtitles
+  const sub = $('sub'), chunk = CHUNKS.find((c) => t >= c.a - .02 && t < c.b)
+  if (!chunk) sub.innerHTML = ''
+  else {
+    if (sub.dataset.id !== String(chunk.a)) {
+      sub.dataset.id = String(chunk.a)
+      sub.innerHTML = chunk.map((x) => `<span>${x.text}</span>`).join(' ')
+    }
+    const k = p(t, chunk.a - .02, chunk.a + .16, E.outBack)
+    sub.style.transform = `translateY(-50%) scale(${lerp(.82, 1, k)})`
+    sub.style.opacity = clamp((t - chunk.a + .02) / .08)
+    sub.querySelectorAll('span').forEach((el, i) => {
+      const on = t >= chunk[i].a && (i === chunk.length - 1 || t < chunk[i + 1].a)
+      el.classList.toggle('on', on)
+    })
+  }
+}
+window.ready = setup()
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>promo preview</title>
+<link rel="icon" href="data:,">
+<style>
+  body { margin: 0; background: #111116; color: #d8d8e4; font: 600 22px -apple-system, system-ui, sans-serif; }
+  #grid { display: grid; gap: 12px; padding: 12px; }
+  figure { margin: 0; }
+  img { display: block; width: 100%; border-radius: 6px; }
+  figcaption { padding: 6px 2px 0; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div id="grid"></div>
+<script>
+  // promo preview: ?files=a.png,b.png&labels=0.50,2.20&cols=6&w=270 (paths relative to the project)
+  const q = new URLSearchParams(location.search)
+  const grid = document.getElementById('grid')
+  const files = q.get('files').split(','), labels = q.get('labels').split(',')
+  grid.style.gridTemplateColumns = `repeat(${q.get('cols')}, ${q.get('w')}px)`
+  grid.innerHTML = files.map((f, i) => `<figure><img src="/${f}" alt=""><figcaption>${labels[i]}</figcaption></figure>`).join('')
+  window.ready = Promise.all([...document.images].map((img) => img.decode()))
+</script>
+</body>
+</html>

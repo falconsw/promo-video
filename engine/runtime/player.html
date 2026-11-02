@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>promo play</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { color-scheme: dark; --line: #2a2a35; --accent: #8f9bff; }
+  html, body { margin: 0; height: 100%; background: #0c0c11; color: #e6e6f0; font: 13px -apple-system, system-ui, sans-serif; }
+  body { display: grid; grid-template-rows: 1fr auto; }
+  #view { position: relative; overflow: hidden; }
+  #scene { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #000; box-shadow: 0 0 0 1px var(--line); }
+  #bar { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 14px; align-items: center; padding: 10px 16px 12px;
+    background: #15151c; border-top: 1px solid var(--line); }
+  #play { width: 40px; height: 32px; border: 1px solid var(--line); border-radius: 8px; background: #1f1f29; color: inherit; font-size: 15px; cursor: pointer; }
+  #track { position: relative; height: 32px; }
+  #pos { position: absolute; inset: 8px 0 auto; width: 100%; margin: 0; accent-color: var(--accent); }
+  .tick { position: absolute; bottom: 0; width: 1px; height: 7px; background: #5c5c6e; }
+  .tick.cue { height: 10px; background: var(--accent); }
+  .tick:hover::after { content: attr(data-name); position: absolute; bottom: 12px; left: 4px; white-space: nowrap; padding: 2px 6px;
+    border-radius: 4px; background: #2a2a38; color: #fff; }
+  #time { font: 13px ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  #now { grid-column: 1 / -1; min-height: 1.4em; color: #9a9ab0; font-size: 14px; }
+  #now b { color: #fff; }
+  #keys { color: #6c6c80; }
+</style>
+</head>
+<body>
+<div id="view"><iframe id="scene" title="scene"></iframe></div>
+<div id="bar">
+  <button id="play" title="space">▶</button>
+  <div id="track"><input id="pos" type="range" min="0" step="0.001" value="0"><div id="ticks"></div></div>
+  <span id="time">0.00 / 0.00</span>
+  <div id="now"></div>
+</div>
+<script type="module">
+  // promo play: ?scene=/scenes/tiktok.html&voice=sadachbia — the scene in real time, with its narration.
+  // space play/pause · ←/→ 1 s · shift+←/→ one frame · home start
+  const q = new URLSearchParams(location.search)
+  const voice = q.get('voice'), outro = q.get('outro'), sfx = outro ? `.${outro}` : '', $ = (id) => document.getElementById(id)
+  const frame = $('scene'), pos = $('pos'), btn = $('play')
+  frame.src = q.get('scene') + (voice ? `?voice=${encodeURIComponent(voice)}${outro ? `&outro=${encodeURIComponent(outro)}` : ''}` : '')
+  await new Promise((r) => frame.addEventListener('load', r, { once: true }))
+  const win = frame.contentWindow
+  await win.ready
+  const { width, height } = win.SIZE, duration = win.DURATION
+  frame.width = width
+  frame.height = height
+  pos.max = duration
+  const fit = () => {
+    const box = $('view').getBoundingClientRect(), s = Math.min((box.width - 24) / width, (box.height - 24) / height)
+    frame.style.transform = `translate(${(box.width - width * s) / 2}px, ${(box.height - height * s) / 2}px) scale(${s})`
+  }
+  addEventListener('resize', fit)
+  fit()
+
+  let audio = null, words = null
+  if (voice) {
+    const blob = await (await fetch(`/narration/${voice}/voice${sfx}.wav`)).blob()  // a blob URL seeks without range requests
+    audio = new Audio(URL.createObjectURL(blob))
+    words = await (await fetch(`/narration/${voice}/words${sfx}.json`)).json()
+    const tick = (t, cls, name) => `<div class="tick ${cls}" style="left:${t / duration * 100}%" data-name="${name}"></div>`
+    $('ticks').innerHTML = words.lines.map((l, i) => tick(l.start, 'line', `${l.id ?? i}: ${l.text}`)).join('') +
+      Object.entries(words.cues ?? {}).map(([name, t]) => tick(t, 'cue', `{${name}} ${t.toFixed(2)}`)).join('')
+  }
+
+  let t = 0, playing = false, from = 0, since = 0, drawn = -1, busy = false
+  const seek = (x) => {
+    t = Math.min(duration, Math.max(0, x))
+    if (audio) audio.currentTime = t
+    from = t; since = performance.now()
+  }
+  const toggle = () => {
+    playing = !playing
+    if (playing && t >= duration - .01) seek(0)
+    from = t; since = performance.now()
+    if (audio) playing ? audio.play() : audio.pause()
+    btn.textContent = playing ? '❚❚' : '▶'
+  }
+  btn.onclick = toggle
+  pos.oninput = () => seek(Number(pos.value))
+  const key = (e) => {
+    const step = e.shiftKey ? 1 / 60 : 1
+    if (e.code === 'Space') toggle()
+    else if (e.code === 'ArrowLeft') seek(t - step)
+    else if (e.code === 'ArrowRight') seek(t + step)
+    else if (e.code === 'Home') seek(0)
+    else return
+    e.preventDefault()
+  }
+  addEventListener('keydown', key)
+  win.addEventListener('keydown', key)
+
+  const caption = () => {
+    if (!words) return ''
+    const line = words.lines.findLast((l) => l.start <= t + .001)
+    if (!line) return ''
+    return line.words.map((w) => {
+      const on = t >= line.start + w.start && t < line.start + w.end
+      return (on ? `<b>${w.text}</b>` : w.text) + (w.cue ? `<sup>{${w.cue}}</sup>` : '')
+    }).join(' ')
+  }
+  async function loop() {
+    if (playing) {
+      t = audio ? audio.currentTime : from + (performance.now() - since) / 1000
+      if (t >= duration) { t = duration; toggle() }
+    }
+    if (!busy && t !== drawn) {
+      busy = true
+      drawn = t
+      try { await win.renderAt(t) } finally { busy = false }
+      pos.value = t
+      $('time').textContent = `${t.toFixed(2)} / ${duration.toFixed(2)}`
+      $('now').innerHTML = caption()
+    }
+    requestAnimationFrame(loop)
+  }
+  loop()
+</script>
+</body>
+</html>

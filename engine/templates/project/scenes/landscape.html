@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="size" content="1920x1080">
+<base href="/">
+<title>{{name}} promo</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="promokit/promokit.css">
+</head>
+<body>
+<div id="stage">
+  <div id="win">
+    <img id="shot" alt="">
+    <div class="ripple" id="r1"></div><div class="ripple" id="r2"></div>
+    <svg class="cursor" id="cursor" viewBox="0 0 26 38"><path d="M3 3 L3 29 L9.5 23 L13.8 33.2 L18.3 31.3 L14.1 21.4 L22.8 21.4 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+  </div>
+
+  <div id="caps"></div>
+
+  <div class="brand" id="intro" style="top:250px">
+    <div class="glow"></div>
+    <img src="icon.png" alt="">
+    <div class="word">{{name}}</div>
+    <div class="tag"></div>
+  </div>
+  <div class="brand" id="outro" style="top:200px">
+    <div class="glow"></div>
+    <img src="icon.png" alt="">
+    <div class="word">{{name}}</div>
+    <div class="tag"></div>
+    <div class="pills"></div>
+  </div>
+</div>
+
+<script type="module">
+import { $, lerp, E, p, track, scene, project, backdrop, BACKDROPS, demo, orPlaceholder, windowSize, frameAt, show, place, pointer,
+  rise, titleCards, titleCard } from './promokit/promokit.js'
+
+// Silent, landscape: an intro card, the app window with title cards over it, an outro with the links.
+// Everything runs on fixed seconds.
+const END = 18
+const WIN_IN = 2.6, WIN_OUT = END - 3.8
+// [from, to, eyebrow, title]: words split on |, <g>…</g> gets the gradient
+const CAPTIONS = [
+  [3.2, 8.2, 'ONE CLICK', 'Does the thing| |<g>in one click</g>'],
+  [8.6, 13.6, 'SEE IT', 'And shows you| |<g>the result</g>'],
+]
+// [seconds, file, camera view (zoom, focus x, y), click (x, y)]; positions in window points, w × h = window size
+const SHOTS = (w, h) => [
+  { t: 0, file: 'frames/01.png' },
+  { t: 5, file: 'frames/02.png', click: [w * .5, h * .5] },
+  { t: 9.5, file: 'frames/03.png', view: [1.6, w * .3, h * .3] },
+]
+
+let bg, D, WIN
+async function setup() {
+  window.DURATION = END
+  bg = backdrop($('stage'), BACKDROPS.landscape)
+  WIN = await windowSize('frames/01.png')  // the app window in points (frames are 2× screenshots of it)
+  document.documentElement.style.setProperty('--win-w', `${WIN[0]}px`)
+  document.documentElement.style.setProperty('--win-h', `${WIN[1]}px`)
+  $('caps').innerHTML = CAPTIONS.map(([, , eyebrow, words]) =>
+    `<div class="cap"><div class="eyebrow">${eyebrow}</div><h1 data-words="${words}"></h1></div>`).join('')
+  titleCards()
+  const shots = SHOTS(...WIN)
+  for (const s of shots) s.file = await orPlaceholder(s.file, WIN)
+  D = demo(shots, { fit: Math.min(1254 / WIN[0], 784 / WIN[1]), at: [960, 630], win: WIN })
+
+  const cfg = await project()
+  for (const tag of document.querySelectorAll('.brand .tag')) tag.textContent = cfg.tagline ?? ''
+  $('outro').querySelector('.pills').innerHTML = (cfg.links ?? []).map((l) => /\s/.test(l)
+    ? `<div class="pill"><code>${l}</code></div>` : `<div class="pill"><span class="dot" style="background:#9aa8ff"></span>${l}</div>`).join('')
+}
+
+function brand(el, t, a) {
+  el.querySelector('img').style.transform = `scale(${lerp(.55, 1, p(t, a + .05, a + .95, E.outBack))}) rotate(${lerp(-8, 0, p(t, a + .05, a + .95))}deg)`
+  rise(el.querySelector('.word'), t, a + .45, 30, .6, .7)
+  rise(el.querySelector('.tag'), t, a + .8, 24, .6, .7)
+  el.querySelector('.glow').style.opacity = p(t, a + .15, a + 1.15)
+}
+
+async function render(t) {
+  bg(t)
+
+  const intro = $('intro')
+  intro.style.opacity = Math.min(p(t, .05, .6), 1 - p(t, 2.4, 2.9, E.inOut))
+  intro.style.transform = `translateY(${-60 * p(t, 2.4, 2.9, E.in)}px) scale(${lerp(1, .92, p(t, 2.4, 2.9))})`
+  brand(intro, t, .05)
+
+  const enter = p(t, WIN_IN, WIN_IN + 1), exit = p(t, WIN_OUT, WIN_OUT + .7, E.inOut)
+  const cam = track(D.views, t, [0])
+  place($('win'), cam, { k: lerp(.86, 1, enter) * lerp(1, .82, exit), dy: (1 - enter) * 220 - exit * 160,
+    opacity: Math.min(enter * 1.4, 1 - exit), blur: exit * 10 })
+  await show($('shot'), frameAt(D.frames, t))
+  pointer(t, { cursor: $('cursor'), ripples: [$('r1'), $('r2')], path: D.path, clicks: D.clicks,
+    scale: 1.25 / Math.max(1, cam[0] * .8), ripple: .6 })
+
+  document.querySelectorAll('#caps .cap').forEach((el, i) => titleCard(el, t, CAPTIONS[i][0], CAPTIONS[i][1]))
+
+  const o = WIN_OUT + .25, outro = $('outro')
+  outro.style.opacity = p(t, o, o + .5)
+  brand(outro, t, o)
+  outro.querySelectorAll('.pill').forEach((el, i) => {
+    el.style.opacity = p(t, o + .9 + i * .15, o + 1.4 + i * .15)
+    el.style.transform = `translateY(${(1 - p(t, o + .9 + i * .15, o + 1.5 + i * .15, E.outBack)) * 26}px)`
+  })
+}
+
+scene(setup, render)
+</script>
+</body>
+</html>

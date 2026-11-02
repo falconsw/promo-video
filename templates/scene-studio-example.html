@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Claude bu videoyu yaptı — 1. bölüm</title>
+<style>
+  /* 1080×1920. TikTok covers the top ~200 px, the bottom ~420 px and a right rail (x > 960, y 800–1500): the action
+     stays in y 200–1250, subtitles sit at y 1330. Everything on screen is real: this video's own waveform, word
+     timings and frame numbers, Leftover's real code, README and script, the cover candidates are this video's own frames. */
+  :root { --bg: #120703; --hi: #ffd0a1; --or: #ff7a2e; --cl: #d97757; --amber: #ffb347; --green: #3ddc84; --red: #ff5a4d;
+    --card: rgba(34,18,11,.88); --mono: "SF Mono", ui-monospace, Menlo, monospace; }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #0a0402; color: #fff;
+    font-family: -apple-system, "SF Pro Display", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .mono { font-family: var(--mono); font-variant-ligatures: none; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+  #desk { position: absolute; inset: 0; opacity: 0;
+    background: radial-gradient(ellipse at 30% 25%, #3a1708 0%, #140603 55%, #070201 100%); }
+  #world { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 0 0; overflow: hidden; background: var(--bg); }
+  .blob { position: absolute; border-radius: 50%; filter: blur(150px); }
+  #grid { position: absolute; inset: 0; opacity: .45;
+    background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 64px 64px; -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%); }
+  #grain { position: absolute; inset: 0; opacity: .045; pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+
+  /* ---- hook: a wall of our earlier promo videos (all made this way), the camera focuses on Folderpad */
+  #wall { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 0 0; }
+  .tile { position: absolute; width: 300px; height: 533px; border-radius: 30px; overflow: hidden; background: #1a0904;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.12); }
+  .tile img { width: 100%; height: 100%; display: block; }
+  .tile .nm { position: absolute; left: 14px; top: 14px; padding: 6px 14px; border-radius: 999px; font-size: 22px; font-weight: 800;
+    background: rgba(0,0,0,.6); color: #fff; }
+  .tile.focus { box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 40px 120px rgba(0,0,0,.7); }
+  #stamp { position: absolute; left: 540px; top: 330px; display: flex; align-items: center; gap: 22px; padding: 24px 40px 24px 28px;
+    border-radius: 999px; background: rgba(22,9,5,.9); box-shadow: 0 0 0 4px var(--cl), 0 0 80px rgba(217,119,87,.75), 0 30px 80px rgba(0,0,0,.6);
+    font-size: 60px; font-weight: 850; letter-spacing: -1px; white-space: nowrap; opacity: 0; }
+  #stamp svg { width: 78px; height: 78px; }
+
+  .tagc { position: absolute; width: 390px; display: flex; align-items: center; gap: 22px; padding: 22px 26px; box-sizing: border-box; border-radius: 32px;
+    background: var(--card); box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 0 0 1.5px rgba(255,255,255,.13); opacity: 0; }
+  .ic { width: 80px; height: 80px; border-radius: 24px; display: grid; place-items: center; flex: none; background: rgba(255,255,255,.08); }
+  .ic svg { width: 48px; height: 48px; }
+  .tagc b { display: block; font-size: 42px; font-weight: 800; letter-spacing: -.5px; }
+  .tagc span { font-size: 29px; color: rgba(255,255,255,.66); font-weight: 650; }
+
+  /* ---- the five-step rail */
+  #rail { position: absolute; left: 0; top: 0; width: 1080px; height: 360px; opacity: 0; }
+  #rail .ln, #rail .fill { position: absolute; left: 160px; top: 252px; width: 760px; height: 6px; border-radius: 3px; transform-origin: 0 50%; }
+  #rail .ln { background: rgba(255,255,255,.13); }
+  #rail .fill { background: linear-gradient(90deg, #ff7a2e, #ffb347); box-shadow: 0 0 18px rgba(255,140,60,.7); }
+  .node { position: absolute; top: 219px; width: 72px; height: 72px; margin-left: -36px; border-radius: 50%; display: grid; place-items: center;
+    font-size: 33px; font-weight: 850; color: rgba(255,255,255,.55); background: #1f0e08; box-shadow: inset 0 0 0 3px rgba(255,255,255,.18); }
+  .node.on { color: #fff; background: linear-gradient(135deg, #ff9145, #d9502a); box-shadow: 0 0 0 7px rgba(255,122,46,.22), 0 0 46px rgba(255,122,46,.85); }
+  .node.done { color: #ffcfa6; background: #3a1a0c; box-shadow: inset 0 0 0 3px var(--or); }
+  .nl { position: absolute; top: 304px; width: 210px; margin-left: -105px; text-align: center; font-size: 27px; font-weight: 750; color: rgba(255,255,255,.5); }
+  .nl.on { color: #fff; }
+
+  /* ---- the one window every step happens in */
+  #win { position: absolute; left: 60px; top: 380px; width: 960px; height: 830px; border-radius: 40px; overflow: hidden; opacity: 0;
+    background: rgba(22,11,7,.92); box-shadow: 0 50px 140px rgba(0,0,0,.65), inset 0 0 0 1.5px rgba(255,255,255,.11); }
+  #win .bar { position: relative; height: 78px; display: flex; align-items: center; gap: 14px; padding: 0 30px; box-sizing: border-box;
+    border-bottom: 1.5px solid rgba(255,255,255,.07); background: rgba(255,255,255,.035); }
+  #win .bar i, .chrome-bar i { width: 22px; height: 22px; border-radius: 50%; }
+  #wtitle { position: absolute; left: 0; right: 0; text-align: center; font-size: 28px; font-weight: 650; color: rgba(255,255,255,.62); }
+  .pane { position: absolute; left: 0; top: 78px; right: 0; bottom: 0; padding: 32px 40px; box-sizing: border-box; opacity: 0; }
+
+  /* step 1: Claude Code reads the app */
+  .ccbox { border: 2.5px solid var(--cl); border-radius: 18px; padding: 18px 26px; font: 600 33px var(--mono); }
+  .ccbox em { font-style: normal; color: var(--cl); }
+  .ccbox small { display: block; margin-top: 6px; font-size: 23px; color: rgba(255,255,255,.5); font-weight: 500; }
+  .prompt { margin-top: 28px; font: 500 35px var(--mono); white-space: nowrap; }
+  .prompt u { text-decoration: none; color: rgba(255,255,255,.45); }
+  .caret { display: inline-block; width: 16px; height: 34px; background: #fff; vertical-align: -6px; margin-left: 3px; }
+  .tool { margin-top: 20px; font: 500 30px var(--mono); white-space: nowrap; opacity: 0; }
+  .tool .d { color: var(--green); }
+  .tool small { display: block; margin-top: 4px; font-size: 25px; color: rgba(255,255,255,.45); padding-left: 34px; }
+  #code, #readme, #feat, #script { position: absolute; left: 40px; right: 40px; opacity: 0; }
+  #code { top: 410px; height: 330px; border-radius: 22px; background: #0f0705; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); overflow: hidden; }
+  .fh { position: relative; z-index: 2; background: #170b07; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 22px; font: 600 22px var(--mono); color: rgba(255,255,255,.6);
+    border-bottom: 1.5px solid rgba(255,255,255,.06); }
+  .fh svg { width: 26px; height: 26px; }
+  #codelines { position: relative; z-index: 1; padding: 14px 22px; font: 500 24px/1.55 var(--mono); white-space: pre; color: rgba(255,255,255,.85); }
+  #codelines .n { color: rgba(255,255,255,.25); display: inline-block; width: 46px; }
+  .k { color: #ff9a5c; } .c { color: rgba(255,214,180,.42); } .ty { color: #ffd38a; }
+  #readme { top: 460px; left: 150px; right: 70px; border-radius: 22px; background: #1d100a; padding-bottom: 26px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 1.5px rgba(255,255,255,.12); }
+  #readme .bd { padding: 20px 28px 0; display: flex; gap: 22px; align-items: center; }
+  #readme img { width: 96px; height: 96px; border-radius: 22px; }
+  #readme h3 { margin: 0; font-size: 46px; font-weight: 850; }
+  #readme p { margin: 14px 28px 0; font-size: 30px; line-height: 1.35; color: rgba(255,255,255,.75); }
+  #feat { top: 410px; display: flex; flex-wrap: wrap; gap: 18px; }
+  .chip { padding: 18px 28px; border-radius: 999px; font-size: 33px; font-weight: 700; background: rgba(255,255,255,.07);
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12); opacity: 0; white-space: nowrap; }
+  .chip.top { box-shadow: inset 0 0 0 2.5px var(--or), 0 0 30px rgba(255,122,46,.45); background: rgba(255,122,46,.14); }
+  .chip b { color: var(--amber); margin-right: 8px; }
+  #script { top: 410px; border-radius: 22px; background: #0f0705; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.6); overflow: hidden; }
+  #scriptlines { padding: 16px 22px 22px; font: 500 28px/1.65 var(--mono); }
+  #scriptlines div { white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  #scriptlines .n { color: var(--amber); display: inline-block; width: 40px; }
+
+  /* step 2: Gemini voices it */
+  .hrow { display: flex; align-items: center; gap: 22px; font-size: 38px; font-weight: 800; letter-spacing: -.5px; }
+  .hrow .ic { width: 76px; height: 76px; }
+  .hrow .pillr { margin-left: auto; font-size: 25px; font-weight: 700; padding: 10px 20px; border-radius: 999px; background: rgba(255,255,255,.08); color: rgba(255,255,255,.75); }
+  .req { margin-top: 28px; border-radius: 22px; background: #0f0705; padding: 22px 28px; font: 500 30px/1.75 var(--mono); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); }
+  .req u { text-decoration: none; display: inline-block; width: 130px; color: rgba(255,255,255,.42); }
+  .req em { font-style: normal; color: var(--hi); }
+  #wavebox { margin-top: 28px; height: 340px; border-radius: 22px; background: #0f0705; position: relative; overflow: hidden; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); }
+  #wavebox .lab, #wbox3 .lab { position: absolute; left: 24px; top: 16px; font: 600 23px var(--mono); color: rgba(255,255,255,.55); }
+  #wave { position: absolute; left: 24px; right: 24px; top: 64px; bottom: 22px; display: flex; align-items: center; gap: 2px; }
+  #wave i { flex: 1; border-radius: 3px; background: rgba(255,208,161,.25); }
+  #wave i.p { background: linear-gradient(180deg, #ffb347, #ff6a1f); }
+  #phead { position: absolute; top: 56px; bottom: 14px; width: 4px; margin-left: -2px; border-radius: 2px; background: #fff; box-shadow: 0 0 16px rgba(255,255,255,.8); }
+  #php { position: absolute; left: 40px; right: 40px; top: 30px; bottom: 30px; border-radius: 28px; background: #0f0705; opacity: 0;
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); display: flex; flex-direction: column; align-items: center; }
+  #php .meta { margin-top: 30px; font: 600 26px var(--mono); color: rgba(255,255,255,.5); }
+  #php .big { margin-top: 10px; font-size: 200px; font-weight: 900; letter-spacing: 6px; line-height: 1; }
+  #php .row { margin-top: 40px; display: flex; align-items: center; gap: 22px; font: 600 26px var(--mono); color: rgba(255,255,255,.5); }
+  #php .val { font: 700 54px var(--mono); padding: 14px 32px; border-radius: 20px; min-width: 420px; text-align: center; }
+  #php .res { margin-top: 36px; width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; font-size: 72px; font-weight: 900; }
+
+  /* step 3: Whisper times every word */
+  #wbox3 { margin-top: 28px; height: 450px; border-radius: 22px; background: #0f0705; position: relative; overflow: hidden; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); }
+  #wave3 { position: absolute; left: 24px; right: 24px; top: 64px; height: 130px; display: flex; align-items: center; gap: 2px; }
+  #wave3 i { flex: 1; border-radius: 3px; background: rgba(255,208,161,.22); }
+  #wave3 i.p { background: linear-gradient(180deg, #ffb347, #ff6a1f); }
+  .wb { position: absolute; height: 70px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 750;
+    background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12); white-space: nowrap; overflow: visible; color: rgba(255,255,255,.4); }
+  .wb.on { color: #fff; background: rgba(255,122,46,.3); box-shadow: inset 0 0 0 2.5px var(--or), 0 0 30px rgba(255,122,46,.6); }
+  .wb.seen { color: #fff; }
+  .wb small { position: absolute; top: 76px; font: 600 21px var(--mono); color: var(--amber); }
+  #phead3 { position: absolute; top: 50px; bottom: 20px; width: 4px; margin-left: -2px; border-radius: 2px; background: #fff; box-shadow: 0 0 16px rgba(255,255,255,.8); }
+  #json { margin-top: 28px; border-radius: 22px; background: #0f0705; padding: 20px 28px; font: 500 32px/1.6 var(--mono); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); white-space: pre; }
+  #json .s { color: var(--hi); } #json .nm { color: var(--amber); }
+  #magnet { position: absolute; left: 0; width: 4px; margin-left: -2px; opacity: 0;
+    background: repeating-linear-gradient(180deg, var(--or) 0 14px, transparent 14px 26px); }
+
+  /* step 4: the scene is a web page; Chrome draws it frame by frame */
+  #log { font: 500 31px/1.75 var(--mono); }
+  #bign { margin-top: 40px; text-align: center; font: 800 190px/1 var(--mono); color: var(--amber); letter-spacing: -6px; text-shadow: 0 0 60px rgba(255,140,60,.5); }
+  #bigt { text-align: center; font: 600 40px var(--mono); color: rgba(255,255,255,.5); margin-top: 6px; }
+  #log .dim { color: rgba(255,255,255,.45); }
+  #log .ok { color: var(--green); }
+  #pbar { margin-top: 26px; height: 26px; border-radius: 13px; background: rgba(255,255,255,.08); overflow: hidden; }
+  #pbar u { display: block; height: 100%; background: linear-gradient(90deg, #ff6a1f, #ffb347); }
+  #chrome { position: absolute; opacity: 0; pointer-events: none; border-radius: 26px; box-shadow: 0 40px 120px rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,.12); }
+  .chrome-bar { position: absolute; left: 0; right: 0; top: 0; height: 64px; border-radius: 26px 26px 0 0; background: #23140e; display: flex; align-items: center; gap: 10px; padding: 0 20px; box-sizing: border-box; }
+  .chrome-bar .url { margin-left: 12px; flex: 1; height: 38px; border-radius: 19px; background: rgba(255,255,255,.08); display: flex; align-items: center; gap: 10px;
+    padding: 0 16px; font: 500 19px var(--mono); color: rgba(255,255,255,.72); white-space: nowrap; overflow: hidden; }
+  .chrome-bar svg { width: 24px; height: 24px; flex: none; }
+  #side { position: absolute; left: 640px; top: 300px; width: 380px; opacity: 0; }
+  #side .lab { font-size: 30px; font-weight: 700; color: rgba(255,255,255,.55); }
+  #fnum { font: 800 104px/1.05 var(--mono); color: var(--amber); letter-spacing: -3px; text-shadow: 0 0 40px rgba(255,140,60,.55); }
+  #ftot { font: 600 32px var(--mono); color: rgba(255,255,255,.55); }
+  #side .spec { margin-top: 18px; display: inline-block; padding: 10px 20px; border-radius: 999px; font: 650 25px var(--mono); background: rgba(255,255,255,.08); }
+  #strip { position: absolute; left: 650px; top: 590px; width: 320px; height: 560px; }
+  .th { position: absolute; width: 150px; height: 267px; border-radius: 16px; overflow: hidden; background: #2a130a center/cover;
+    box-shadow: 0 16px 40px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,255,255,.15); }
+  .th b { position: absolute; left: 8px; bottom: 8px; font: 700 17px var(--mono); padding: 3px 8px; border-radius: 8px; background: rgba(0,0,0,.65); color: var(--amber); }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+
+  /* step 5: cover and the four platforms */
+  .cand { position: absolute; width: 190px; height: 338px; border-radius: 16px; overflow: hidden; background: #2a130a center/cover;
+    box-shadow: 0 16px 40px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,255,255,.14); opacity: 0; }
+  .cand b { position: absolute; left: 8px; top: 8px; font: 700 18px var(--mono); padding: 3px 8px; border-radius: 8px; background: rgba(0,0,0,.65); color: var(--amber); }
+  #cover { position: absolute; border-radius: 22px; overflow: hidden; background: #2a130a center/cover; opacity: 0;
+    box-shadow: 0 0 0 5px #ff7a2e, 0 0 70px rgba(255,122,46,.7), 0 30px 80px rgba(0,0,0,.6); }
+  .plat { position: absolute; left: 40px; right: 40px; height: 108px; display: flex; align-items: center; gap: 22px; padding: 0 22px; box-sizing: border-box;
+    border-radius: 24px; background: #0f0705; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); opacity: 0; }
+  .plat .ic { width: 70px; height: 70px; border-radius: 20px; }
+  .plat .ic svg { width: 40px; height: 40px; }
+  .plat .nm { font-size: 31px; font-weight: 800; width: 200px; flex: none; }
+  .plat .ds { flex: 1; min-width: 0; font: 500 22px var(--mono); color: rgba(255,255,255,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .plat .st { flex: none; font-size: 24px; font-weight: 800; padding: 10px 18px; border-radius: 999px; background: rgba(255,255,255,.08); color: rgba(255,255,255,.55); }
+  .plat .st.ok { background: rgba(61,220,132,.18); color: var(--green); box-shadow: inset 0 0 0 2px rgba(61,220,132,.6); }
+
+  /* big step numerals that slam in, then fly to their rail node */
+  #dim { position: absolute; inset: 0; background: #080301; opacity: 0; }
+  #slam { position: absolute; left: 0; top: 0; width: 1080px; text-align: center; font-size: 820px; font-weight: 900; line-height: 1; letter-spacing: -20px; opacity: 0;
+    background: linear-gradient(180deg, #ffd29a 0%, #ff8a3d 55%, #d9502a 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 60px rgba(255,122,46,.6)); transform-origin: 50% 50%; }
+
+  /* finale: one button */
+  #final { position: absolute; left: 0; right: 0; top: 520px; display: flex; flex-direction: column; align-items: center; opacity: 0; }
+  #btn { position: relative; width: 560px; height: 160px; border-radius: 80px; display: grid; place-items: center; font-size: 66px; font-weight: 900; letter-spacing: -1px;
+    background: linear-gradient(135deg, #ff9145, #d9502a); box-shadow: 0 30px 90px rgba(255,100,40,.55), inset 0 2px 0 rgba(255,255,255,.35); }
+  #ripple { position: absolute; left: 50%; top: 50%; width: 560px; height: 160px; margin: -80px 0 0 -280px; border-radius: 80px; box-shadow: 0 0 0 4px var(--amber); opacity: 0; }
+  #apprs { display: flex; gap: 22px; margin-top: 60px; }
+  .appr { padding: 16px 28px; border-radius: 999px; font-size: 34px; font-weight: 800; background: rgba(61,220,132,.16); color: var(--green);
+    box-shadow: inset 0 0 0 2px rgba(61,220,132,.6); opacity: 0; }
+  #cursor { position: absolute; width: 64px; height: 64px; opacity: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+
+  /* part 2 teaser + platform outro */
+  #part2 { position: absolute; left: 0; right: 0; top: 400px; display: flex; flex-direction: column; align-items: center; opacity: 0; }
+  #part2 .ic { width: 170px; height: 170px; border-radius: 48px; background: rgba(217,119,87,.16); box-shadow: inset 0 0 0 3px rgba(217,119,87,.6), 0 0 90px rgba(217,119,87,.5); }
+  #part2 .ic svg { width: 104px; height: 104px; }
+  #part2 .pl { margin-top: 40px; padding: 12px 30px; border-radius: 999px; background: #ffc23a; color: #1a0b04; font-size: 36px; font-weight: 900; }
+  #part2 .word { margin-top: 18px; font-size: 156px; font-weight: 900; letter-spacing: -5px; line-height: 1; }
+  #part2 .sub { margin-top: 18px; font-size: 42px; font-weight: 650; color: rgba(255,255,255,.72); }
+
+  /* word-by-word subtitles */
+  #sub { position: absolute; left: 70px; width: 940px; top: 1330px; transform: translateY(-50%); text-align: center;
+    font-size: 78px; font-weight: 800; line-height: 1.08; letter-spacing: -1px; color: #fff;
+    -webkit-text-stroke: 14px rgba(20,7,3,.92); paint-order: stroke fill; }
+  #sub span { display: inline-block; transform-origin: 50% 60%; }
+  #sub span.on { color: var(--hi); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="desk"></div>
+  <div id="world">
+    <div class="blob" id="b1" style="width:900px;height:900px;background:#ff6a1f"></div>
+    <div class="blob" id="b2" style="width:760px;height:760px;background:#d97757"></div>
+    <div class="blob" id="b3" style="width:620px;height:620px;background:#ffb347"></div>
+    <div id="grid"></div>
+
+    <div id="wall"></div>
+    <div id="stamp"><span data-icon="claude"></span>Claude yaptı</div>
+    <div class="tagc" id="g0" style="left:20px;top:430px"><div class="ic" data-icon="claude"></div><div><b>Senaryo</b><span>Claude</span></div></div>
+    <div class="tagc" id="g1" style="left:670px;top:600px"><div class="ic" data-icon="gemini"></div><div><b>Ses</b><span>Gemini</span></div></div>
+    <div class="tagc" id="g2" style="left:20px;top:800px"><div class="ic" data-icon="claude"></div><div><b>Kurgu</b><span>Claude</span></div></div>
+    <div class="tagc" id="g3" style="left:670px;top:970px"><div class="ic" data-icon="claude"></div><div><b>Paylaşım</b><span>Claude</span></div></div>
+
+    <div id="rail"><div class="ln"></div><div class="fill"></div></div>
+
+    <div id="win">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div id="wtitle"></div></div>
+
+      <div class="pane" id="P1">
+        <div class="ccbox"><em>✻</em> Welcome to Claude Code<small>cwd: ~/code/Leftover</small></div>
+        <div class="prompt"><u>&gt; </u><span id="ptext"></span><span class="caret" id="caret"></span></div>
+        <div class="tool" id="tl0"><span class="d">●</span> Read(Sources/Features/ProviderRing.swift)<small>⎿ 467 satır okundu</small></div>
+        <div class="tool" id="tl1"><span class="d">●</span> Read(README.md)<small>⎿ 149 satır okundu</small></div>
+        <div id="code"><div class="fh"><span data-icon="swift"></span>ProviderRing.swift</div><div id="codelines"></div></div>
+        <div id="readme"><div class="fh">README.md</div><div class="bd"><img src="frames/leftover-icon.png" alt=""><h3>Leftover</h3></div>
+          <p>A macOS menu bar app that shows how much of your AI coding tools' usage limits is left.</p></div>
+        <div id="feat"></div>
+        <div id="script"><div class="fh">senaryo.txt</div><div id="scriptlines"></div></div>
+      </div>
+
+      <div class="pane" id="P2">
+        <div id="p2main">
+          <div class="hrow"><div class="ic" data-icon="gemini"></div>Gemini'ye gönderiliyor<span class="pillr" id="sent">⏳ okunuyor</span></div>
+          <div class="req"><u>model</u>gemini-3.8-flash-tts<br><u>ses</u>sadachbia<br><u>ton</u><em id="ton"></em></div>
+          <div id="wavebox"><div class="lab" id="wlab">voice.wav</div><div id="wave"></div><div id="phead"></div></div>
+        </div>
+        <div id="php">
+          <div class="meta">metin: "PHP" · aynı metin, iki farklı not</div>
+          <div class="big">PHP</div>
+          <div class="row">okunuş notu<span class="val" id="pval"></span></div>
+          <div class="res" id="pres"></div>
+        </div>
+      </div>
+
+      <div class="pane" id="P3">
+        <div class="hrow"><div class="ic" style="background:rgba(255,255,255,.1)"><svg viewBox="0 0 24 24"><g fill="#ffd0a1"><rect x="2" y="9" width="2.4" height="6" rx="1.2"/><rect x="6.2" y="5" width="2.4" height="14" rx="1.2"/><rect x="10.4" y="2" width="2.4" height="20" rx="1.2"/><rect x="14.6" y="6" width="2.4" height="12" rx="1.2"/><rect x="18.8" y="9" width="2.4" height="6" rx="1.2"/></g></svg></div>Whisper<span class="pillr">yerel · words.json</span></div>
+        <div id="wbox3"><div class="lab" id="w3lab"></div><div id="wave3"></div><div id="words3"></div><div id="phead3"></div></div>
+        <div id="json"></div>
+      </div>
+
+      <div class="pane" id="P4">
+        <div id="log"></div>
+        <div id="pbar"><u></u></div>
+        <div id="bign">0000</div><div id="bigt"></div>
+      </div>
+
+      <div class="pane" id="P5">
+        <div id="cands"></div>
+        <div id="cover"></div>
+        <div id="plats"></div>
+      </div>
+    </div>
+
+    <div id="final">
+      <div id="btn"><span id="btext">Onayla</span><div id="ripple"></div></div>
+      <div id="apprs"><div class="appr">✓ Metin onayı</div><div class="appr">✓ Ses onayı</div></div>
+    </div>
+    <svg id="cursor" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.6 14.8 L11.6 21.5 L14.4 20.3 L11.4 13.7 L17.5 13.4 Z" fill="#fff" stroke="#111" stroke-width="1.2" stroke-linejoin="round"/></svg>
+
+    <div id="part2">
+      <div class="ic" data-icon="claude"></div>
+      <div class="pl">2. BÖLÜM</div>
+      <div class="word">Kurulum</div>
+      <div class="sub">sıradaki videoda</div>
+    </div>
+    <div id="grain"></div>
+  </div>
+
+  <div id="chrome"><div class="chrome-bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i>
+    <div class="url"><span data-icon="chrome"></span>127.0.0.1/compose-tiktok.html?p=tiktok</div></div></div>
+  <div id="side">
+    <div class="lab">Chrome çiziyor · kare</div>
+    <div id="fnum">0000</div>
+    <div id="ftot"></div>
+    <div class="spec">60 fps · 1080×1920</div>
+  </div>
+  <div id="strip"></div>
+  <div id="flash"></div>
+
+  <div id="dim"></div>
+  <div id="slam"></div>
+  <div id="sub"></div>
+</div>
+
+<script src="cta.js"></script>
+<script>
+// ---------- helpers ----------
+const $ = (id) => document.getElementById(id)
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v))
+const lerp = (a, b, k) => a + (b - a) * k
+const E = {
+  out: (k) => 1 - Math.pow(1 - k, 3),
+  inOut: (k) => (k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2),
+  outBack: (k) => { const c = 1.6; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2) },
+  outExpo: (k) => (k >= 1 ? 1 : 1 - Math.pow(2, -10 * k)),
+}
+const p = (t, a, b, e = E.out) => e(clamp((t - a) / (b - a)))
+const life = (t, a, b, c, d, e = E.out) => Math.min(p(t, a, b, e), 1 - p(t, c, d, E.inOut))
+const typed = (s, t, a, cps = 40) => s.slice(0, Math.max(0, Math.floor((t - a) * cps)))
+const pad = (n, w = 4) => String(n).padStart(w, '0')
+const show = (el, o, tf = '') => { el.style.opacity = o; el.style.transform = tf; el.style.visibility = o <= 0.001 ? 'hidden' : 'visible' }
+
+// the wall: 3×3 tiles, Folderpad (v4) in the middle; frames/wall/v<i>/NNN.jpg are 30 fps stills of each finished promo
+const WALL = ['Leftover', 'MiniMax', 'Nabız', 'Dürücü', 'Folderpad', 'Kestirme', 'Notla', 'Sentic', 'Launchset']
+const TW = 300, TH = 533, GAP = 36, WCX = 540, WCY = 760, FOCUS_Y = 740
+const NODE_X = [160, 350, 540, 730, 920]
+const LABELS = ['Senaryo', 'Ses', 'Zamanlama', 'Render', 'Yayın']
+const TITLES = ['claude — ~/Leftover', 'Gemini TTS — sadachbia', 'Whisper — words.json', 'render.mjs — Chrome', 'Kapak ve yayın']
+const FEATS = ['Tüm limitler tek yerde', 'Menü çubuğunda halkalar', 'Şifre istemez', 'Anında bildirim', 'Yerel modeller', 'Ücretsiz · açık kaynak']
+const SCRIPT = ['Claude Code, Codex veya Cursor kullanırken…', 'Leftover, kullandığın tüm yapay zeka araçlarının…',
+  'Menü çubuğunda her hesap için ayrı bir halka var…', 'Claude, Codex, Cursor, Copilot ve Grok\'tan…']
+const CODE = `/// The ring around a provider glyph: a grey track with a coloured arc that
+/// starts at 12 o'clock and sweeps clockwise by the fraction used.
+struct ProviderRing: View {
+    let usedFraction: Double?
+    let glyph: ProviderGlyph
+    var showsRemaining: Bool = false
+    var isStale: Bool = false
+    var isBlocked: Bool = false
+    var weeklyExhausted: Bool = false
+    var shutRingsWhenSpent: Bool = true
+    var activity: ActivitySummary?
+    var isRefreshing: Bool = false
+    var weeklyFraction: Double?
+    @State private var spin: Double = 0
+
+    private var band: UsageBand {
+        guard !isBlocked else { return .exhausted }
+        if let bandOverride { return bandOverride }
+        return UsageBand.band(for: usedFraction ?? 0)
+    }`
+const PLATS = [['youtube', 'YouTube', '#FF0000'], ['tiktok', 'TikTok', '#111'], ['instagram', 'Instagram', 'linear-gradient(135deg,#feda75,#d62976 55%,#4f5bd5)'], ['x', 'X', '#111']]
+const SELF_T = [1.0, 7.6, 13.6, 21.8, 27.1, 31.0]   // frames/self/s<i>.jpg are this video at these seconds
+const DESC = 'Bu videoyu baştan sona Claude yaptı: senaryo, ses, kurgu…'
+
+let T = {}, CHUNKS = [], SFX = [], WAVE = [], ICON = {}, L9W = [], CTA = null
+window.SIZE = { width: 1080, height: 1920 }
+
+function hl(line) {   // tiny Swift highlighter for the code card
+  if (line.trim().startsWith('///')) return `<span class="c">${line}</span>`
+  return line.replace(/\b(struct|let|var|private|guard|else|return|if|View)\b/g, '<span class="k">$1</span>')
+    .replace(/\b(Double|Bool|ProviderGlyph|ActivitySummary|UsageBand)\b/g, '<span class="ty">$1</span>')
+}
+const icon = (name, color) => `<svg viewBox="0 0 24 24"><path fill="${color ?? ICON[name].hex}" d="${ICON[name].d}"/></svg>`
+
+async function setup() {
+  const q = new URLSearchParams(location.search)
+  const voice = q.get('voice') ?? 'sadachbia', plat = q.get('p') ?? 'x'
+  const N = await (await fetch(`narration/${voice}/words${plat === 'x' ? '' : '.' + plat}.json`)).json()
+  window.DURATION = N.duration
+  T.plat = plat
+  WAVE = await (await fetch('frames/wave.json')).json()
+  for (const n of ['claude', 'gemini', 'chrome', 'swift', 'youtube', 'tiktok', 'instagram', 'x']) {
+    const svg = await (await fetch(`frames/icons/${n}.svg`)).text()
+    ICON[n] = { d: svg.match(/ d='([^']+)'/)[1], hex: svg.match(/fill='([^']+)'/)[1] }
+  }
+  ICON.tiktok.hex = ICON.x.hex = '#fff'
+  document.querySelectorAll('[data-icon]').forEach((el) => { el.innerHTML = icon(el.dataset.icon) })
+
+  const L = N.lines
+  const w = (i, j) => L[i].start + L[i].words[j].start
+  const e = (i) => L[i].start + L[i].words.at(-1).end
+  const at = (i, text, nth = 0) => {
+    const js = L[i].words.map((x, j) => [x, j]).filter(([x]) => x.text.replace(/^[^\p{L}\d]+/u, '').startsWith(text))
+    if (!js[nth]) throw new Error(`line ${i} has no word starting with ${text}`)
+    return w(i, js[nth][1])
+  }
+  const s = (i) => L[i].start
+  Object.assign(T, { w, e, at, s, n: L.length })
+
+  // subtitles: up to 3 words / 17 chars per chunk, always breaking after punctuation
+  for (const line of L) {
+    let cur = []
+    const flush = () => { if (cur.length) CHUNKS.push(cur); cur = [] }
+    for (const wd of line.words) {
+      const word = { text: wd.text, a: line.start + wd.start, b: line.start + wd.end }
+      if (cur.length && (cur.length >= 3 || [...cur, word].map((x) => x.text).join(' ').length > 17)) flush()
+      cur.push(word)
+      if (/[.,:;!?]$/.test(wd.text)) flush()
+    }
+    flush()
+  }
+  CHUNKS.forEach((c, i) => { c.a = c[0].a; c.b = Math.min(CHUNKS[i + 1]?.[0].a ?? Infinity, c.at(-1).b + .45) })
+
+  // ---- beats, all hung on the words that name them
+  T.claude = at(0, 'Claude')
+  T.tags = [at(1, 'Senaryoyu'), at(1, 'sesi'), at(1, 'kurgulayıp'), at(1, 'paylaşan')]
+  T.nasil = s(2); T.bes = at(2, 'Beş')
+  T.step = [at(3, 'Bir'), at(5, 'İki'), at(9, 'Üç'), at(10, 'Dört'), at(11, 'Beş')]
+  T.kod = at(3, 'kodunu'); T.belge = at(3, 'belgelerini'); T.feat = s(4); T.one = at(4, 'öne'); T.senaryo = at(4, 'senaryoyu')
+  T.send = at(5, 'gönderiyor'); T.yanlis = s(6); T.php1 = s(7); T.php2 = s(8)
+  T.sahne = at(10, 'sahne'); T.chr = at(10, 'Chrome'); T.kare = [at(10, 'kare', 0), at(10, 'kare', 1)]; T.ciz = at(10, 'çiziyor')
+  T.back = s(11) - .55
+  T.uret = at(11, 'üretiyor'); T.yapay = at(11, 'yapay'); T.acik = s(12); T.dort = at(12, 'dört'); T.plan = at(12, 'planlıyor')
+  T.bana = s(13); T.onay = at(13, 'Onay'); T.hepsi = at(13, 'Hepsi'); T.p2 = s(14)
+  T.winOut = T.bana - .35
+  T.panes = [[T.step[0] + .2, T.step[1] + .2], [T.step[1] + .2, T.step[2] + .2], [T.step[2] + .2, T.step[3] + .2],
+    [T.step[3] + .2, T.step[4] + .2], [T.step[4] + .2, T.winOut + .4]]
+  // step 3 timeline: line 9's own words, in the video's own clock
+  T.l9 = [s(9) - .15, e(9) + .15]
+  L9W = L[9].words.map((x) => ({ text: x.text, a: s(9) + x.start, b: s(9) + x.end }))
+  // step 4: frame captures while Chrome draws
+  T.web = at(10, 'web'); T.shots = [0, 1, 2, 3, 4, 5].map((i) => T.web + .25 + i * .42)
+  if (plat !== 'x') {
+    const o = T.n - 1
+    // the platform sign-off: the old promokit outroCta (cta.js), the part-2 card above lifts itself out of the way
+    T.cta = T.s(o)
+    CTA = outroCta($('stage'), { platform: plat, start: T.cta, top: 860,
+      taps: ['Beğen', 'yorumla', 'paylaş', 'kaydet'].map((x) => at(o, x)), follow: at(o, plat === 'tiktok' ? 'takip' : 'abone') })
+  }
+
+  SFX = [[0, 'whoosh'], [T.claude - .05, 'thud'], ...T.tags.map((a) => [a - .05, 'pop']), [T.bes - .1, 'whoosh'],
+    ...T.step.map((a) => [a - .05, 'thud']), [T.step[0] + .45, 'type'], [T.kod - .05, 'pop'], [T.belge - .05, 'pop'], [T.senaryo, 'type'],
+    [T.send - .1, 'whoosh'], [T.php1 + .05, 'error'], [T.php2 + .1, 'ping'],
+    ...L9W.map((x) => [x.a, 'tick']), [T.sahne - .25, 'whoosh'], ...T.shots.map((a) => [a, 'shutter']), [T.back, 'whoosh'],
+    [T.step[4] + .9, 'pop'], [T.step[4] + 1.05, 'pop'], [T.step[4] + 1.2, 'pop'], [T.uret, 'ping'],
+    ...[0, 1, 2, 3].map((i) => [lerp(T.dort, T.plan + .5, i / 3), i === 3 ? 'glass' : 'ping']),
+    [T.onay - .05, 'click'], [T.onay + .35, 'glass'], [T.p2 - .1, 'whoosh']]
+  if (CTA) SFX.push(...CTA.sfx)
+  window.SFX = SFX
+
+  // ---- build the DOM pieces
+  $('wall').innerHTML = WALL.map((name, i) => {
+    const c = i % 3, r = Math.floor(i / 3)
+    return `<div class="tile${i === 4 ? ' focus' : ''}" id="v${i}" style="left:${WCX - TW / 2 + (c - 1) * (TW + GAP)}px;top:${WCY - TH / 2 + (r - 1) * (TH + GAP)}px">` +
+      `<img src="frames/wall/v${i}/001.jpg" alt=""><span class="nm">${name}</span></div>`
+  }).join('')
+  // rail
+  $('rail').insertAdjacentHTML('beforeend', NODE_X.map((x, i) =>
+    `<div class="node" id="n${i}" style="left:${x}px">${i + 1}</div><div class="nl" id="nl${i}" style="left:${x}px">${LABELS[i]}</div>`).join(''))
+  // step 1
+  $('codelines').innerHTML = CODE.split('\n').map((l, i) => `<div><span class="n">${17 + i}</span>${hl(l)}</div>`).join('')
+  $('feat').innerHTML = FEATS.map((f, i) => `<div class="chip${i < 3 ? ' top' : ''}">${i < 3 ? `<b>★</b>` : ''}${f}</div>`).join('')
+  $('scriptlines').innerHTML = SCRIPT.map((l, i) => `<div><span class="n">${i + 1}</span><span class="tx"></span></div>`).join('')
+  // step 2: the whole narration's waveform, 150 bars
+  const NB = 150, per = WAVE.length / NB
+  $('wave').innerHTML = Array.from({ length: NB }, (_, i) => {
+    const v = Math.max(...WAVE.slice(Math.floor(i * per), Math.floor((i + 1) * per)))
+    return `<i style="height:${6 + v * 230}px"></i>`
+  }).join('')
+  $('wlab').textContent = `voice.wav · ${(WAVE.length / 60).toFixed(1).replace('.', ',')} sn · 60 kare/sn`
+  // step 3: line 9 waveform + word blocks
+  const [a3, b3] = T.l9, NB3 = 120
+  $('wave3').innerHTML = Array.from({ length: NB3 }, (_, i) => {
+    const f0 = Math.floor((a3 + (b3 - a3) * i / NB3) * 60), f1 = Math.floor((a3 + (b3 - a3) * (i + 1) / NB3) * 60)
+    const v = Math.max(0, ...WAVE.slice(f0, Math.max(f1, f0 + 1)))
+    return `<i style="height:${5 + v * 100}px"></i>`
+  }).join('')
+  $('w3lab').textContent = `satır 10 · ${a3.toFixed(2)}–${b3.toFixed(2)} sn`
+  const X3 = (tt) => 24 + (tt - a3) / (b3 - a3) * 832
+  $('words3').innerHTML = L9W.map((x, i) => {
+    const l = X3(x.a), r = X3(x.b), wdt = Math.max(r - l, 62)
+    return `<div class="wb" id="wb${i}" style="left:${l}px;width:${wdt}px;top:${i % 2 ? 326 : 216}px">${x.text.replace(/[:.]$/, '')}<small>${x.a.toFixed(2)}</small></div>`
+  }).join('')
+  T.X3 = X3
+  // step 4: thumbnails of this video (frames/self/*.jpg, captured from earlier preview passes)
+  $('strip').innerHTML = [0, 1, 2, 3, 4, 5].map((i) => `<div class="th" id="th${i}" style="background-image:url(frames/self/s${i}.jpg)"><b></b></div>`).join('')
+  // step 5
+  // step 5: the cover is made from this video's own frames (skill rule): 8 candidates, the clearest UI wins
+  const CAND_T = [0, 1, 2, 3, 4, 5, 6, 7].map((k) => 3 + (58.97 - 9) * k / 7)
+  $('cands').innerHTML = CAND_T.map((tt, k) => `<div class="cand" id="k${k}" style="left:${40 + (k % 4) * 220}px;top:${14 + Math.floor(k / 4) * 358}px;` +
+    `background-image:url(frames/cand/k${k}.jpg)"><b>${tt.toFixed(1).replace('.', ',')} sn</b></div>`).join('')
+  $('cover').style.backgroundImage = 'url(frames/cover.jpg)'
+  $('plats').innerHTML = PLATS.map(([k, name, bg], i) =>
+    `<div class="plat" id="pl${i}" style="top:${248 + i * 118}px"><div class="ic" style="background:${bg}">${icon(k, '#fff')}</div>` +
+    `<div class="nm">${name}</div><div class="ds"></div><div class="st">Planlanıyor</div></div>`).join('')
+
+  await Promise.all([...document.images].map((img) => img.decode().catch(() => {})))
+}
+
+function paneK(t, [a, b]) { return Math.min(p(t, a, a + .3), 1 - p(t, b - .2, b + .05, E.inOut)) }
+
+window.renderAt = async function (t) {
+  const { s, e, at } = T
+  const frame = Math.round(t * 60), total = Math.round(window.DURATION * 60)
+
+  // ---- backdrop
+  $('b1').style.transform = `translate(${-380 + 80 * Math.sin(t * .3)}px, ${-260 + 70 * Math.cos(t * .25)}px)`
+  $('b2').style.transform = `translate(${480 + 70 * Math.cos(t * .28)}px, ${1050 + 80 * Math.sin(t * .3)}px)`
+  $('b3').style.transform = `translate(${160 + 110 * Math.sin(t * .2)}px, ${420 + 60 * Math.sin(t * .35)}px)`
+  $('b1').style.opacity = .5; $('b2').style.opacity = .4; $('b3').style.opacity = .3
+
+  // ---- hook: the wall of finished promos plays; the camera pushes in and pulls focus onto Folderpad
+  const hookOut = p(t, T.nasil + .1, T.nasil + .7, E.inOut)
+  const push = p(t, .25, T.claude - .15, E.inOut), S = lerp(1, 2, push) * lerp(1, 1.25, hookOut)
+  const wall = $('wall')
+  show(wall, 1 - hookOut, `translate(${540 - WCX * S}px, ${lerp(WCY, FOCUS_Y, push) - WCY * S}px) scale(${S})`)
+  if (hookOut < 1) {
+    const fi = String(Math.min(315, 1 + Math.floor(t * 30))).padStart(3, '0')
+    const imgs = [...wall.querySelectorAll('img')]
+    imgs.forEach((img, i) => { const src = `frames/wall/v${i}/${fi}.jpg`; if (!img.src.endsWith(src)) img.src = src })
+    await Promise.all(imgs.map((img) => img.decode().catch(() => {})))
+    for (let i = 0; i < 9; i++) {
+      const el = $('v' + i), soft = i === 4 ? lerp(3, 0, p(t, .2, 1.4)) : lerp(1.5, 16, push)
+      el.style.filter = `blur(${soft + hookOut * 10}px) brightness(${i === 4 ? 1 : lerp(.9, .45, push)})`
+      el.querySelector('.nm').style.opacity = 1 - push
+    }
+  }
+  const sk = p(t, T.claude - .05, T.claude + .4, E.outBack)
+  show($('stamp'), Math.min(p(t, T.claude - .05, T.claude + .1), 1 - hookOut),
+    `translate(-50%, -50%) rotate(-5deg) scale(${lerp(1.8, 1, Math.max(0, sk)) * lerp(1, .8, hookOut)})`)
+  T.tags.forEach((a, i) => {
+    const k = p(t, a - .1, a + .35, E.outBack)
+    show($('g' + i), Math.min(p(t, a - .1, a + .1), 1 - hookOut),
+      `translateX(${(1 - Math.max(0, k)) * (i % 2 ? 80 : -80)}px) scale(${lerp(.7, 1, Math.max(0, k)) * lerp(1, .85, hookOut)})`)
+  })
+
+  // ---- rail: draws on "Beş adımda", lights the step that is on, fills behind it
+  const rail = $('rail'), railIn = p(t, T.bes - .15, T.bes + .45, E.inOut), railOut = p(t, T.p2 - .35, T.p2, E.inOut)
+  show(rail, Math.min(railIn, 1 - railOut), `translateY(${(1 - railIn) * -40}px)`)
+  rail.querySelector('.ln').style.transform = `scaleX(${railIn})`
+  let cur = -1
+  T.step.forEach((a, i) => { if (t >= a + .7) cur = i })
+  const allDone = t >= T.hepsi
+  const fillTo = allDone ? 4 : Math.max(0, cur)
+  const fillK = cur < 0 ? 0 : (allDone ? p(t, T.hepsi, T.hepsi + .5, E.inOut) : 0)
+  rail.querySelector('.fill').style.transform = `scaleX(${cur < 0 ? 0 : (lerp(NODE_X[Math.max(0, cur)], NODE_X[4], fillK) - 160) / 760})`
+  NODE_X.forEach((x, i) => {
+    const n = $('n' + i), lab = $('nl' + i), a = T.bes - .1 + i * .08, k = p(t, a, a + .4, E.outBack)
+    const on = !allDone && i === cur, done = allDone ? t >= T.hepsi + i * .1 : i < cur
+    n.className = 'node' + (on ? ' on' : done ? ' done' : '')
+    n.textContent = done ? '✓' : String(i + 1)
+    lab.className = 'nl' + (on || done ? ' on' : '')
+    const land = T.step[i] + .7, bump = 1 + .3 * life(t, land - .05, land + .08, land + .15, land + .4)
+    const sweep = allDone ? 1 + .25 * life(t, T.hepsi + i * .1, T.hepsi + i * .1 + .12, T.hepsi + i * .1 + .2, T.hepsi + i * .1 + .45) : 1
+    n.style.transform = `scale(${lerp(.3, 1, Math.max(0, k)) * bump * sweep})`
+    n.style.opacity = p(t, a, a + .2)
+  })
+
+  // ---- big numeral: slams in on "Bir / İki / Üç / Dört / Beş", then flies into its rail node
+  const si = T.step.findIndex((a) => t >= a - .08 && t < a + .85)
+  if (si >= 0) {
+    const a = T.step[si], k1 = p(t, a - .08, a + .16, E.outExpo), fly = p(t, a + .42, a + .82, E.inOut)
+    $('slam').textContent = String(si + 1)
+    const cx = 540, cy = 790, tx = NODE_X[si], ty = 255
+    const sc = lerp(lerp(1.6, 1, k1), .085, fly)
+    $('slam').style.top = `${cy - 410}px`
+    show($('slam'), Math.min(k1, 1 - p(t, a + .72, a + .84)), `translate(${(tx - cx) * fly}px, ${(ty - cy) * fly}px) scale(${sc})`)
+    $('dim').style.opacity = .55 * life(t, a - .08, a + .05, a + .4, a + .7)
+  } else { show($('slam'), 0); $('dim').style.opacity = 0 }
+
+  // ---- the window
+  const win = $('win'), wk = p(t, T.step[0] + .2, T.step[0] + .7, E.outBack), wOut = p(t, T.winOut, T.winOut + .4, E.inOut)
+  show(win, Math.min(p(t, T.step[0] + .2, T.step[0] + .45), 1 - wOut), `translateY(${(1 - Math.max(0, wk)) * 80 + wOut * -40}px) scale(${lerp(.92, 1, Math.max(0, wk)) * lerp(1, .94, wOut)})`)
+  const pi = T.panes.findIndex(([a, b]) => t >= a - .1 && t < b + .05)
+  $('wtitle').textContent = TITLES[Math.max(0, pi)]
+  T.panes.forEach((rng, i) => { const k = paneK(t, rng); show($('P' + (i + 1)), k, `translateY(${(1 - k) * 24}px)`) })
+
+  // step 1 — Claude Code reads the code and the README, picks what to show, writes the script
+  const PROMPT = 'Leftover için tanıtım videosu yap'
+  $('ptext').textContent = typed(PROMPT, t, T.step[0] + .45, 42)
+  $('caret').style.opacity = (Math.floor(t * 2.5) % 2 || t < T.step[0] + 1.3) ? 1 : 0
+  ;[T.kod, T.belge].forEach((a, i) => { const k = p(t, a - .1, a + .25); show($('tl' + i), k, `translateX(${(1 - k) * -30}px)`) })
+  const codeOut = p(t, T.feat - .1, T.feat + .2, E.inOut)
+  const ck = p(t, T.kod, T.kod + .35)
+  show($('code'), Math.min(ck, 1 - codeOut), `translateY(${(1 - ck) * 40}px)`)
+  $('codelines').style.transform = `translateY(${-p(t, T.kod + .2, T.feat, (k) => k) * 260}px)`
+  const rk = p(t, T.belge - .05, T.belge + .35, E.outBack)
+  show($('readme'), Math.min(p(t, T.belge - .05, T.belge + .15), 1 - codeOut), `rotate(${lerp(4, -1.5, Math.max(0, rk))}deg) scale(${lerp(.8, 1, Math.max(0, rk))})`)
+  const featOut = p(t, T.senaryo - .1, T.senaryo + .15, E.inOut)
+  show($('feat'), 1 - featOut)
+  document.querySelectorAll('#feat .chip').forEach((el, i) => {
+    const a = T.feat + i * .07, k = p(t, a, a + .35, E.outBack)
+    const top = i < 3 && t >= T.one + i * .12
+    el.classList.toggle('top', top)
+    el.querySelector('b')?.style.setProperty('display', top ? '' : 'none')
+    el.style.opacity = p(t, a, a + .2) * (t >= T.one && !top ? .45 : 1)
+    el.style.transform = `scale(${lerp(.6, 1, Math.max(0, k)) * (top ? 1 + .08 * life(t, T.one + i * .12, T.one + i * .12 + .12, T.one + i * .12 + .2, T.one + i * .12 + .45) : 1)})`
+  })
+  const sck = p(t, T.senaryo - .05, T.senaryo + .3)
+  show($('script'), sck, `translateY(${(1 - sck) * 50}px)`)
+  document.querySelectorAll('#scriptlines .tx').forEach((el, i) => { el.textContent = typed(SCRIPT[i], t, T.senaryo + .05 + i * .2, 120) })
+
+  // step 2 — the narration goes to Gemini; this video's own waveform comes back
+  $('ton').textContent = typed('"emin, sıcak; her kelime tam"', t, T.step[1] + .5, 50)
+  const sent = t >= T.send + .5
+  $('sent').textContent = sent ? '✓ ses hazır' : '⏳ okunuyor'
+  $('sent').style.color = sent ? '#3ddc84' : ''
+  const reveal = p(t, T.send - .1, T.send + .9, (k) => k)
+  const bars = $('wave').children, played = clamp(t / (WAVE.length / 60))
+  for (let i = 0; i < bars.length; i++) {
+    const vis = i / bars.length < reveal
+    bars[i].style.transform = `scaleY(${vis ? p(t, T.send - .1 + i / bars.length * 1, T.send + i / bars.length + .15, E.outBack) : 0})`
+    bars[i].className = i / bars.length < played ? 'p' : ''
+  }
+  $('phead').style.left = `${24 + played * (960 - 80 - 48)}px`
+  $('phead').style.opacity = reveal >= 1 ? 1 : 0
+  const phpIn = p(t, T.yanlis + .1, T.yanlis + .5, E.inOut), phpOut = p(t, T.step[2] - .1, T.step[2] + .1)
+  show($('p2main'), 1 - phpIn, `translateY(${phpIn * -40}px) scale(${lerp(1, .95, phpIn)})`)
+  show($('php'), Math.min(phpIn, 1 - phpOut), `scale(${lerp(.94, 1, phpIn)})`)
+  const pv = $('pval'), pr = $('pres')
+  if (t < T.php1 - .05) {
+    pv.textContent = '…'; pv.style.cssText = 'color:rgba(255,255,255,.5);background:rgba(255,255,255,.06)'
+    pr.textContent = '?'; pr.style.cssText = 'background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)'
+  } else if (t < T.php2 - .05) {
+    const shake = Math.sin((t - T.php1) * 70) * 14 * (1 - clamp((t - T.php1) / .45))
+    pv.textContent = 'pe-he-pe'; pv.style.cssText = `color:#ff6a5c;background:rgba(255,90,77,.14);box-shadow:inset 0 0 0 2.5px rgba(255,90,77,.7);transform:translateX(${shake}px)`
+    pr.textContent = '✗'; pr.style.cssText = `background:#ff5a4d;box-shadow:0 0 50px rgba(255,90,77,.7);transform:scale(${lerp(.5, 1, Math.max(0, p(t, T.php1, T.php1 + .3, E.outBack)))})`
+  } else {
+    const k = p(t, T.php2 - .05, T.php2 + .3, E.outBack)
+    pv.textContent = 'pi · eyç · pi'; pv.style.cssText = `color:#3ddc84;background:rgba(61,220,132,.14);box-shadow:inset 0 0 0 2.5px rgba(61,220,132,.7);transform:scale(${lerp(.85, 1, Math.max(0, k))})`
+    pr.textContent = '✓'; pr.style.cssText = `background:#2fbf6e;box-shadow:0 0 50px rgba(61,220,132,.7);transform:scale(${lerp(.5, 1, Math.max(0, k))})`
+  }
+
+  // step 3 — Whisper: line 9's words, each pinned to the moment it is said
+  const [a3, b3] = T.l9, ph3 = T.X3(clamp(t, a3, b3))
+  $('phead3').style.left = `${ph3}px`
+  const bars3 = $('wave3').children
+  for (let i = 0; i < bars3.length; i++) bars3[i].className = a3 + (b3 - a3) * i / bars3.length < t ? 'p' : ''
+  let active = -1
+  L9W.forEach((x, i) => {
+    const el = $('wb' + i), on = t >= x.a && t < (L9W[i + 1]?.a ?? x.b + .3)
+    if (on) active = i
+    el.className = 'wb' + (on ? ' on' : t >= x.a ? ' seen' : '')
+    el.style.transform = `scale(${1 + .14 * life(t, x.a - .02, x.a + .06, x.a + .1, x.a + .3)})`
+    el.querySelector('small').style.opacity = t >= x.a ? 1 : 0
+  })
+  const jw = L9W[Math.max(0, active)]
+  $('json').innerHTML = `{ <span class="nm">"text"</span>: <span class="s">"${jw.text.replace(/[:.]$/, '')}"</span>,\n  <span class="nm">"start"</span>: ${jw.a.toFixed(2)}, <span class="nm">"end"</span>: ${jw.b.toFixed(2)} }`
+
+  // step 4 — the whole scene shrinks into the Chrome tab that draws it; frames counted live
+  const zo = p(t, T.sahne - .25, T.sahne + .55, E.inOut) * (1 - p(t, T.back, T.back + .55, E.inOut))
+  const WK = .5, WX = 60, WY = 300
+  const ks = lerp(1, WK, zo)
+  $('world').style.transform = `translate(${WX * zo}px, ${WY * zo}px) scale(${ks})`
+  $('world').style.borderRadius = `${zo * 52}px`
+  $('desk').style.opacity = zo
+  const chrome = $('chrome')
+  chrome.style.left = `${WX}px`; chrome.style.top = `${WY - 64}px`; chrome.style.width = `${1080 * WK}px`; chrome.style.height = `${1920 * WK + 64}px`
+  show(chrome, p(t, T.sahne + .2, T.sahne + .5) * (1 - p(t, T.back - .1, T.back + .15)))
+  const sideK = p(t, T.web - .2, T.web + .2) * (1 - p(t, T.back - .1, T.back + .15))
+  show($('side'), sideK, `translateX(${(1 - sideK) * 40}px)`)
+  $('fnum').textContent = pad(frame)
+  $('ftot').textContent = `/ ${pad(total)}`
+  let shot = -1
+  T.shots.forEach((a, i) => { if (t >= a) shot = i })
+  show($('strip'), sideK)
+  for (let i = 0; i < 6; i++) {
+    const el = $('th' + i)
+    if (i > shot) { show(el, 0); continue }
+    const age = shot - i, k = p(t, T.shots[i], T.shots[i] + .25, E.outBack)
+    const col = age % 2, row = Math.floor(age / 2)     // newest top-left, older ones pushed along
+    el.style.left = `${col * 165}px`; el.style.top = `${row * 285}px`
+    show(el, age > 3 ? 0 : 1, `scale(${lerp(.6, 1, Math.max(0, k))})`)
+    el.querySelector('b').textContent = `kare ${pad(Math.round(SELF_T[i] * 60))}`
+  }
+  $('flash').style.opacity = .22 * Math.max(0, ...T.shots.map((a) => life(t, a, a + .03, a + .05, a + .18)))
+  $('log').innerHTML = `<span class="dim">$</span> node render.mjs video tiktok.mp4 60<br><span class="ok">✓</span> Chrome açıldı · 1080×1920 · 60 fps`
+  $('pbar').querySelector('u').style.width = `${frame / total * 100}%`
+  $('bign').textContent = pad(frame); $('bigt').textContent = `/ ${pad(total)} kare`
+
+  // step 5 — eight frames of this very video are the cover candidates; the clearest UI (k4, Whisper) becomes the cover
+  const c5 = T.step[4] + .85, PICK = 4, grow = p(t, T.uret - .15, T.uret + .45, E.inOut), cShrink = p(t, T.acik - .15, T.acik + .35, E.inOut)
+  for (let k = 0; k < 8; k++) {
+    const el = $('k' + k), a = c5 + k * .06, kk = p(t, a, a + .35, E.outBack), picked = k === PICK && t >= T.yapay
+    show(el, p(t, a, a + .2) * (t >= T.yapay && k !== PICK ? lerp(1, .3, p(t, T.yapay, T.yapay + .3)) : 1) * (1 - grow),
+      `scale(${lerp(.6, 1, Math.max(0, kk)) * (picked ? 1 + .08 * life(t, T.yapay, T.yapay + .15, T.yapay + .25, T.yapay + .5) : 1)})`)
+    el.style.boxShadow = picked ? '0 0 0 5px #ff7a2e, 0 0 50px rgba(255,122,46,.7)' : ''
+  }
+  // the picked frame grows into the finished cover, then steps aside for the platforms
+  const from = [40, 372, 190, 338], big = [295, 30, 370, 658], small = [40, 14, 118, 210]
+  const box5 = from.map((v, i) => lerp(lerp(v, big[i], grow), small[i], cShrink))
+  const cv = $('cover')
+  Object.assign(cv.style, { left: `${box5[0]}px`, top: `${box5[1]}px`, width: `${box5[2]}px`, height: `${box5[3]}px` })
+  show(cv, p(t, T.uret - .15, T.uret))
+  PLATS.forEach((_, i) => {
+    const el = $('pl' + i), a = T.acik + .05 + i * .1, k = p(t, a, a + .35, E.outBack)
+    show(el, p(t, a, a + .2), `translateX(${(1 - Math.max(0, k)) * 60}px)`)
+    el.querySelector('.ds').textContent = typed(DESC, t, a + .15, 60)
+    const ok = t >= lerp(T.dort, T.plan + .5, i / 3), st = el.querySelector('.st')
+    st.textContent = ok ? 'Planlandı ✓' : 'Planlanıyor'
+    st.classList.toggle('ok', ok)
+  })
+
+  // ---- finale: the one thing left to do
+  const fin = $('final'), fIn = p(t, T.bana - .1, T.bana + .4, E.outBack), fOut = p(t, T.p2 - .35, T.p2 - .05, E.inOut)
+  show(fin, Math.min(p(t, T.bana - .1, T.bana + .15), 1 - fOut), `scale(${lerp(.8, 1, Math.max(0, fIn)) * lerp(1, .9, fOut)})`)
+  const press = life(t, T.onay - .06, T.onay, T.onay + .05, T.onay + .2)
+  $('btn').style.transform = `scale(${1 - .07 * press})`
+  const okd = t >= T.onay + .3
+  $('btext').textContent = okd ? '✓ Onaylandı' : 'Onayla'
+  $('btn').style.background = okd ? 'linear-gradient(135deg,#3ddc84,#1f9d58)' : ''
+  const rp = p(t, T.onay, T.onay + .6)
+  $('ripple').style.opacity = t >= T.onay ? 1 - rp : 0
+  $('ripple').style.transform = `scale(${1 + rp * .35})`
+  document.querySelectorAll('.appr').forEach((el, i) => {
+    const a = T.onay + .45 + i * .15, k = p(t, a, a + .35, E.outBack)
+    show(el, p(t, a, a + .15), `scale(${lerp(.6, 1, Math.max(0, k))})`)
+  })
+  const cur0 = [840, 1120], cur1 = [600, 700]
+  const cm = p(t, T.bana + .2, T.onay - .1, E.inOut)
+  show($('cursor'), Math.min(p(t, T.bana + .15, T.bana + .3), 1 - fOut),
+    `translate(${lerp(cur0[0], cur1[0], cm)}px, ${lerp(cur0[1], cur1[1], cm)}px) scale(${1 - .12 * press})`)
+
+  // ---- part 2 teaser (+ platform outro)
+  const p2 = $('part2'), p2k = p(t, T.p2 - .1, T.p2 + .45, E.outBack), ctaIn = T.cta ? p(t, T.cta - .55, T.cta + .15, E.inOut) : 0
+  show(p2, p(t, T.p2 - .1, T.p2 + .15), `translateY(${(1 - Math.max(0, p2k)) * 60 - ctaIn * 120}px) scale(${lerp(.85, 1, Math.max(0, p2k)) * lerp(1, .84, ctaIn)})`)
+  if (CTA) CTA(t)
+
+  // ---- subtitles
+  const sub = $('sub'), chunk = CHUNKS.find((c) => t >= c.a - .02 && t < c.b)
+  if (!chunk) sub.innerHTML = ''
+  else {
+    if (sub.dataset.id !== String(chunk.a)) {
+      sub.dataset.id = String(chunk.a)
+      sub.innerHTML = chunk.map((x) => `<span>${x.text}</span>`).join(' ')
+    }
+    const k = p(t, chunk.a - .02, chunk.a + .16, E.outBack)
+    sub.style.transform = `translateY(-50%) scale(${lerp(.82, 1, k)})`
+    sub.style.opacity = clamp((t - chunk.a + .02) / .08)
+    sub.querySelectorAll('span').forEach((el, i) => {
+      el.classList.toggle('on', t >= chunk[i].a && (i === chunk.length - 1 || t < chunk[i + 1].a))
+    })
+  }
+}
+window.ready = setup()
+</script>
+</body>
+</html>

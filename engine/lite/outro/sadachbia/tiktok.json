@@ -1,0 +1,56 @@
+{
+ "text": "Beğen, yorumla, paylaş, kaydet; daha fazlası için takip et!",
+ "start_in_source": 32.82,
+ "words": [
+  {
+   "text": "Beğen,",
+   "start": 0.0,
+   "end": 0.48,
+   "cue": "outro-like"
+  },
+  {
+   "text": "yorumla,",
+   "start": 0.74,
+   "end": 1.32,
+   "cue": "outro-comment"
+  },
+  {
+   "text": "paylaş,",
+   "start": 1.64,
+   "end": 2.16,
+   "cue": "outro-share"
+  },
+  {
+   "text": "kaydet;",
+   "start": 2.5,
+   "end": 2.96,
+   "cue": "outro-save"
+  },
+  {
+   "text": "daha",
+   "start": 3.3,
+   "end": 3.44
+  },
+  {
+   "text": "fazlası",
+   "start": 3.44,
+   "end": 3.98
+  },
+  {
+   "text": "için",
+   "start": 3.98,
+   "end": 4.16
+  },
+  {
+   "text": "takip",
+   "start": 4.16,
+   "end": 4.56,
+   "cue": "outro-follow"
+  },
+  {
+   "text": "et!",
+   "start": 4.56,
+   "end": 4.68
+  }
+ ]
+}

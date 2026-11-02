@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Leftover TikTok</title>
+<style>
+  /* 1080×1920. TikTok covers the top ~200 px, the bottom ~420 px and a right rail (x > 960, y 800–1500),
+     so the action stays in y 200–1200 and the subtitles sit around y 1330. frames/panel.png is the real
+     Leftover panel (362×312 pt at 2×, Turkish, demo data from LEFTOVER_DEMO=1). */
+  :root { --bg: #070818; --hi: #aab6ff; --accent: #9aa8ff; --green: #2fd18a; --mint: #5fe3b2; --red: #ff4d4d; }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: var(--bg);
+    font-family: -apple-system, "SF Pro Display", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(150px); }
+  #grid { position: absolute; inset: 0; opacity: .4;
+    background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 64px 64px; -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%); }
+
+  /* hook: three tools with no idea what is left */
+  .tool { position: absolute; left: 150px; width: 780px; height: 190px; box-sizing: border-box; padding: 30px 36px; border-radius: 34px;
+    background: #15172b; box-shadow: 0 30px 80px rgba(0,0,0,.5), inset 0 0 0 1.5px rgba(255,255,255,.1); color: #fff; opacity: 0; }
+  .tool .hd { display: flex; align-items: center; gap: 20px; font-size: 46px; font-weight: 750; letter-spacing: -.5px; }
+  .tool .hd i { width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; font: 800 36px -apple-system; font-style: normal; }
+  .tool .q { margin-left: auto; font-size: 56px; font-weight: 800; color: rgba(255,255,255,.35); }
+  .tool .bar { margin-top: 26px; height: 18px; border-radius: 9px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .tool .bar u { display: block; height: 100%; width: 0; border-radius: 9px; background: rgba(255,255,255,.35); }
+  #toast { position: absolute; left: 230px; top: 1010px; width: 620px; padding: 26px 34px; box-sizing: border-box; border-radius: 26px;
+    display: flex; align-items: center; gap: 22px; color: #fff; font-size: 36px; font-weight: 700; opacity: 0;
+    background: rgba(255,77,77,.16); box-shadow: inset 0 0 0 2px rgba(255,77,77,.55), 0 20px 60px rgba(0,0,0,.45); }
+  #toast b { width: 56px; height: 56px; border-radius: 50%; background: var(--red); display: grid; place-items: center; font-size: 36px; flex: none; }
+
+  .brand { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; opacity: 0; }
+  .brand img { width: 300px; height: 300px; }
+  .brand .word { color: #fff; font-size: 140px; font-weight: 800; letter-spacing: -4px; margin-top: -6px; }
+  .brand .glow { position: absolute; top: -60px; width: 640px; height: 520px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(110,120,255,.5), rgba(110,120,255,0)); }
+  .tag { margin-top: 18px; padding: 16px 32px; border-radius: 999px; font-size: 40px; font-weight: 650; color: #fff; opacity: 0;
+    background: rgba(20,22,52,.78); border: 1px solid rgba(255,255,255,.14); }
+
+  /* macOS menu bar, then the panel under it */
+  #menubar { position: absolute; left: 0; right: 0; top: 230px; height: 64px; display: flex; align-items: center; gap: 30px; padding: 0 40px;
+    box-sizing: border-box; color: #fff; font-size: 28px; font-weight: 600; opacity: 0;
+    background: rgba(22,24,40,.75); backdrop-filter: blur(20px); box-shadow: 0 1px 0 rgba(255,255,255,.08); }
+  #menubar .sp { flex: 1; }
+  #menubar .dim { color: rgba(255,255,255,.75); font-weight: 500; }
+  #mbitem { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 10px; }
+  #mbitem img { width: 34px; height: 34px; filter: brightness(0) invert(1); }
+  #panelwrap { position: absolute; left: 0; top: 0; width: 362px; height: 312px; transform-origin: 0 0; opacity: 0; }
+  #panel { width: 362px; height: 312px; border-radius: 12px; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 .5px rgba(255,255,255,.12); }
+  .hl { position: absolute; border-radius: 9px; opacity: 0; box-shadow: 0 0 0 2px var(--c, #9aa8ff), 0 0 14px 4px color-mix(in srgb, var(--c, #9aa8ff) 55%, transparent); }
+
+  /* "ve dahası": the other providers */
+  #more { position: absolute; left: 90px; top: 900px; width: 900px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .chip { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 20px; color: #fff; font-size: 27px; font-weight: 650;
+    background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); opacity: 0; white-space: nowrap; }
+  .chip img { width: 40px; height: 40px; filter: brightness(0) invert(1); }
+  .chip.local { box-shadow: inset 0 0 0 2px var(--accent), 0 0 24px rgba(154,168,255,.4); }
+
+  /* no password: sessions already on the Mac flow into Leftover */
+  #lock { position: absolute; left: 390px; top: 260px; width: 300px; height: 300px; opacity: 0; }
+  #nopw { position: absolute; left: 0; right: 0; top: 580px; text-align: center; opacity: 0; }
+  #nopw span { display: inline-block; padding: 14px 34px; border-radius: 999px; font-size: 40px; font-weight: 750; color: #fff;
+    background: rgba(47,209,138,.16); box-shadow: inset 0 0 0 2px rgba(47,209,138,.6); }
+  .src { position: absolute; left: 150px; width: 780px; display: flex; align-items: center; gap: 20px; padding: 22px 30px; box-sizing: border-box;
+    border-radius: 24px; background: #15172b; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); color: #fff; font-size: 34px; font-weight: 650; opacity: 0; }
+  .src code { font: 500 28px ui-monospace, "SF Mono", Menlo, monospace; color: rgba(255,255,255,.6); margin-left: auto; }
+  .src b { color: var(--mint); font-size: 38px; }
+
+  /* macOS notifications */
+  .note { position: absolute; left: 110px; width: 860px; display: flex; gap: 22px; padding: 24px 28px; box-sizing: border-box; border-radius: 34px;
+    background: rgba(44,46,50,.9); backdrop-filter: blur(30px); box-shadow: 0 20px 60px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.12);
+    color: #fff; opacity: 0; }
+  .note img { width: 76px; height: 76px; flex: none; }
+  .note .t { font-size: 32px; font-weight: 700; }
+  .note .b { font-size: 29px; color: rgba(255,255,255,.8); margin-top: 4px; }
+  .note .when { margin-left: auto; font-size: 24px; color: rgba(255,255,255,.5); }
+
+  .pills { display: flex; flex-direction: column; align-items: center; gap: 18px; margin-top: 40px; }
+  .pill { padding: 16px 30px; border-radius: 999px; font-size: 38px; font-weight: 650; color: #fff; opacity: 0;
+    background: rgba(20,22,52,.78); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35); display: flex; align-items: center; gap: 12px; }
+  .pill code { font: 600 28px ui-monospace, "SF Mono", Menlo, monospace; color: #d9dcff; font-variant-ligatures: none; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
+
+  /* platform outro: the brand card stays on top, the buttons come from cta.js (outroCta) */
+  #endcard { position: absolute; left: 0; right: 0; top: 330px; display: flex; flex-direction: column; align-items: center; opacity: 0; }
+  #endcard img.ic { width: 200px; height: 200px; }
+  #endcard .word { color: #fff; font-size: 110px; font-weight: 800; letter-spacing: -3px; margin-top: -4px; }
+  #endcard .sub { color: rgba(255,255,255,.75); font-size: 34px; font-weight: 500; margin-top: 6px; }
+
+  /* word-by-word subtitles */
+  #sub { position: absolute; left: 70px; width: 900px; top: 1330px; transform: translateY(-50%); text-align: center;
+    font-size: 78px; font-weight: 800; line-height: 1.08; letter-spacing: -1px; color: #fff;
+    -webkit-text-stroke: 14px rgba(5,6,20,.92); paint-order: stroke fill; }
+  #sub span { display: inline-block; transform-origin: 50% 60%; }
+  #sub span.on { color: var(--hi); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="blob" id="b1" style="width:900px;height:900px;background:#3340d6"></div>
+  <div class="blob" id="b2" style="width:760px;height:760px;background:#8a2fc7"></div>
+  <div class="blob" id="b3" style="width:620px;height:620px;background:#1e7fbf"></div>
+  <div id="grid"></div>
+
+  <div class="tool" id="t0" style="top:330px"><div class="hd"><i style="background:#d97757">✳</i>Claude Code<span class="q">?%</span></div><div class="bar"><u></u></div></div>
+  <div class="tool" id="t1" style="top:560px"><div class="hd"><i style="background:#10a37f">◎</i>Codex<span class="q">?%</span></div><div class="bar"><u></u></div></div>
+  <div class="tool" id="t2" style="top:790px"><div class="hd"><i style="background:#f2f2f2;color:#111">▲</i>Cursor<span class="q">?%</span></div><div class="bar"><u></u></div></div>
+  <div id="toast"><b>!</b>Kullanım limitine ulaşıldı</div>
+
+  <div class="brand" id="intro" style="top:400px">
+    <div class="glow"></div>
+    <img src="icon.png" alt="">
+    <div class="word">Leftover</div>
+    <div class="tag" id="tag">Tüm yapay zeka limitleri tek yerde</div>
+  </div>
+
+  <div id="menubar"><span>􀣺</span><span>Finder</span><span class="dim">Dosya</span><span class="dim">Düzen</span><span class="sp"></span>
+    <span id="mbitem"><img src="frames/menubar.svg" alt=""><span id="mbtext">Claude %93</span></span><span class="dim">Per 16:00</span></div>
+  <div id="panelwrap">
+    <img id="panel" src="frames/panel.png" alt="">
+    <div class="hl" id="hlA"></div><div class="hl" id="hlB"></div><div class="hl" id="hlC"></div>
+  </div>
+
+  <div id="more"></div>
+
+  <svg id="lock" viewBox="0 0 100 100"><rect x="22" y="44" width="56" height="44" rx="9" fill="#2fd18a"/>
+    <path d="M33 44 V32 a17 17 0 0 1 34 0 V44" fill="none" stroke="#2fd18a" stroke-width="8"/>
+    <circle cx="50" cy="63" r="6" fill="#070818"/><rect x="47" y="63" width="6" height="12" rx="3" fill="#070818"/>
+    <line id="slash" x1="14" y1="90" x2="86" y2="14" stroke="#ff4d4d" stroke-width="8" stroke-linecap="round" stroke-dasharray="102" stroke-dashoffset="102"/></svg>
+  <div id="nopw"><span>✓ Şifre yok</span></div>
+  <div class="src" id="s0" style="top:700px">Claude Code<code>~/.claude</code><b>✓</b></div>
+  <div class="src" id="s1" style="top:820px">Codex<code>~/.codex</code><b>✓</b></div>
+  <div class="src" id="s2" style="top:940px">Cursor<code>Cursor oturumu</code><b>✓</b></div>
+  <div class="src" id="s3" style="top:1060px">Copilot<code>gh auth</code><b>✓</b></div>
+
+  <div class="note" id="n0" style="top:330px"><img src="icon.png" alt=""><div><div class="t">Claude limitine ulaşıldı</div><div class="b">Geçerli oturum limiti doldu.</div></div><div class="when">şimdi</div></div>
+  <div class="note" id="n1" style="top:530px"><img src="icon.png" alt=""><div><div class="t">Codex sıfırlandı</div><div class="b">Haftalık limit yeniden kullanılabilir.</div></div><div class="when">şimdi</div></div>
+  <div class="note" id="n2" style="top:730px"><img src="icon.png" alt=""><div><div class="t">Claude Code tamamlandı</div><div class="b">Ajan işini bitirdi.</div></div><div class="when">şimdi</div></div>
+
+  <div class="brand" id="outro" style="top:300px">
+    <div class="glow"></div>
+    <img src="icon.png" alt="">
+    <div class="word">Leftover</div>
+    <div class="pills">
+      <div class="pill"><span class="dot"></span>Ücretsiz · Açık kaynak</div>
+      <div class="pill"><code>brew install --cask falconsw/tap/leftover</code></div>
+      <div class="pill"><span class="dot"></span>github.com/falconsw/Leftover</div>
+    </div>
+  </div>
+
+  <div id="endcard">
+    <img class="ic" src="icon.png" alt="">
+    <div class="word">Leftover</div>
+    <div class="sub">Tüm yapay zeka limitleri tek yerde.</div>
+  </div>
+
+  <div id="sub"></div>
+</div>
+
+<script src="cta.js"></script>
+<script>
+// ---------- helpers ----------
+const $ = (id) => document.getElementById(id)
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v))
+const lerp = (a, b, k) => a + (b - a) * k
+const E = {
+  out: (k) => 1 - Math.pow(1 - k, 3),
+  inOut: (k) => (k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2),
+  outBack: (k) => { const c = 1.6; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2) },
+}
+const p = (t, a, b, e = E.out) => e(clamp((t - a) / (b - a)))
+const life = (t, a, b, c, d, e = E.out) => Math.min(p(t, a, b, e), 1 - p(t, c, d, E.inOut))
+function track(keys, t) {
+  let i = keys.findIndex(([kt]) => kt > t)
+  if (i === -1) return keys.at(-1).slice(1)
+  if (i === 0) return keys[0].slice(1)
+  const a = keys[i - 1], b = keys[i], k = E.inOut(clamp((t - a[0]) / (b[0] - a[0])))
+  return a.slice(1).map((v, j) => lerp(v, b[j + 1], k))
+}
+const pop = (el, t, a, from = .6) => { const k = p(t, a, a + .45, E.outBack); return `scale(${lerp(from, 1, Math.max(0, k))})` }
+
+// Panel points, in pt (frames/panel.png is 2×): ring centres and the rows worth pointing at
+const RING = { Claude: 45, Codex: 113, Cursor: 181, Grok: 249, Copilot: 317 }
+const ROW = { used: [14, 168, 120, 18], reset: [212, 140, 134, 18], title: [14, 116, 140, 24] }
+const MORE = [['opencode', 'OpenCode'], ['kilo', 'Kilo'], ['amp', 'Amp'], ['glm', 'GLM'], ['kimi', 'Kimi'], ['minimax', 'MiniMax'],
+  ['deepseek', 'DeepSeek'], ['qoder', 'Qoder'], ['lmstudio', 'LM Studio'], ['omlx', 'oMLX'], ['ollama', 'Ollama', true]]
+
+let T = {}, CHUNKS = [], SFX = [], CTA = null
+window.SIZE = { width: 1080, height: 1920 }
+
+async function setup() {
+  const q = new URLSearchParams(location.search)
+  const voice = q.get('voice') ?? 'sadachbia', plat = q.get('p') ?? 'x'
+  const N = await (await fetch(`narration/${voice}/words${plat === 'x' ? '' : '.' + plat}.json`)).json()
+  window.DURATION = N.duration
+  T.plat = plat
+
+  const L = N.lines
+  const w = (i, j) => L[i].start + L[i].words[j].start
+  const e = (i) => L[i].start + L[i].words.at(-1).end
+  const at = (i, text) => {
+    const j = L[i].words.findIndex((x) => x.text.replace(/^[^\p{L}\d]+/u, '').startsWith(text))
+    if (j < 0) throw new Error(`line ${i} has no word starting with ${text}`)
+    return w(i, j)
+  }
+  Object.assign(T, { w, e, at, s: (i) => L[i].start, n: L.length })
+
+  // subtitles: up to 3 words / 17 chars per chunk, always breaking after punctuation
+  for (const line of L) {
+    let cur = []
+    const flush = () => { if (cur.length) CHUNKS.push(cur); cur = [] }
+    for (const wd of line.words) {
+      const word = { text: wd.text, a: line.start + wd.start, b: line.start + wd.end }
+      if (cur.length && (cur.length >= 3 || [...cur, word].map((x) => x.text).join(' ').length > 17)) flush()
+      cur.push(word)
+      if (/[.,:;!?]$/.test(wd.text)) flush()
+    }
+    flush()
+  }
+  CHUNKS.forEach((c, i) => { c.a = c[0].a; c.b = Math.min(CHUNKS[i + 1]?.[0].a ?? Infinity, c.at(-1).b + .45) })
+
+  // beats, all hung on the words that name them
+  T.hook = [at(0, "Claude"), at(0, "Codex"), at(0, "Cursor")]
+  T.toast = at(0, 'limit') - .2
+  T.brand = T.s(1) - .1
+  T.tag = at(1, 'tek')
+  T.mb = T.s(2) - .2                     // menu bar arrives with "Menü çubuğunda"
+  T.click = at(2, 'her') - .15            // the item is clicked, the panel drops
+  T.ring = at(2, 'halka')
+  T.used = at(2, 'harcadığını') - .15
+  T.reset = at(2, 'sıfırlanacağını') - .15
+  T.glance = at(2, 'tek')
+  T.names = { Claude: at(3, 'Claude'), Codex: at(3, 'Codex'), Cursor: at(3, 'Cursor'), Copilot: at(3, 'Copilot'), Grok: at(3, 'Grok') }
+  T.more = at(3, 'Ollama') - .25
+  T.ollama = at(3, 'yerel') - .1
+  T.panelOut = T.s(4) - .3
+  T.lock = at(4, 'şifre') - .1
+  T.slash = at(4, 'istemez')
+  T.srcs = at(4, "Mac'inde") - .2
+  T.secOut = e(4) + .25
+  T.notes = [at(5, 'dolduğunda') - .1, at(5, 'yenilendiğinde') - .1, at(5, 'bitirdiğinde') - .1]
+  T.notesOut = e(5) + .2
+  T.back = T.s(6) - .15                 // "Böylece…": the panel again; Claude is spent, Copilot has room
+  T.spent = at(6, 'hız') - .1
+  T.switch = at(6, 'diğer') - .1
+  T.backOut = T.s(7) - .3
+  T.outro = T.s(7) - .2
+  T.free = at(7, 'ücretsiz') - .05
+  T.brew = at(7, 'Homebrew') - .1
+  if (plat !== 'x') {
+    const o = T.n - 1
+    // the platform sign-off (cta.js, the old promokit outroCta): buttons tapped on their words, then the follow button
+    T.cta = T.s(o) - .35
+    CTA = outroCta($('stage'), { platform: plat, start: T.s(o), top: 860,
+      taps: ['Beğen', 'yorumla', 'paylaş', 'kaydet'].map((x) => at(o, x)), follow: at(o, plat === 'tiktok' ? 'takip' : 'abone') })
+  }
+  SFX = [[T.click, 'pop'], [T.notes[0], 'pop'], [T.notes[1], 'pop'], [T.notes[2], 'glass'], ...(CTA ? CTA.sfx : [])]
+  window.SFX = SFX
+
+  $('more').innerHTML = MORE.map(([f, name, local]) =>
+    `<div class="chip${local ? ' local' : ''}"><img src="frames/glyphs/${f}.svg" alt="">${name}</div>`).join('') +
+    '<div class="chip">+ daha fazla</div>'
+
+  await Promise.all([...document.images].map((img) => img.decode().catch(() => {})))
+}
+
+// a highlight box over the panel, in panel points
+function box(el, t, rect, a, b, c = '#9aa8ff') {
+  const [x, y, w, h] = rect
+  el.style.cssText = `left:${x - 4}px;top:${y - 4}px;width:${w + 8}px;height:${h + 8}px;--c:${c};opacity:${life(t, a, a + .15, b, b + .2)}`
+}
+const ringRect = (name) => [RING[name] - 29, 15, 58, 78]
+
+function brand(el, t, a) {
+  el.querySelector('img').style.transform = `scale(${lerp(.55, 1, p(t, a, a + .7, E.outBack))})`
+  el.querySelector('.glow').style.opacity = p(t, a + .1, a + 1)
+}
+function word(el, t, a) {
+  el.style.cssText = `opacity:${p(t, a, a + .4)};transform:translateY(${(1 - p(t, a, a + .5)) * 36}px)`
+}
+
+window.renderAt = async function (t) {
+  $('b1').style.transform = `translate(${-380 + 80 * Math.sin(t * .3)}px, ${-260 + 70 * Math.cos(t * .25)}px)`
+  $('b2').style.transform = `translate(${480 + 70 * Math.cos(t * .28)}px, ${1050 + 80 * Math.sin(t * .3)}px)`
+  $('b3').style.transform = `translate(${160 + 110 * Math.sin(t * .2)}px, ${420 + 60 * Math.sin(t * .35)}px)`
+  $('b1').style.opacity = .5; $('b2').style.opacity = .4; $('b3').style.opacity = .3
+  const { s, e } = T
+
+  // ---- hook: three tools, a question mark where the number should be; then the limit hits
+  const hookOut = p(t, T.brand - .45, T.brand, E.inOut)
+  T.hook.forEach((a, i) => {
+    const el = $('t' + i), k = p(t, a - .15, a + .3)
+    el.style.opacity = Math.min(k, 1 - hookOut)
+    el.style.transform = `translateY(${(1 - k) * 60 + hookOut * (560 - 230 * i - 0)}px) scale(${lerp(1, .3, hookOut) * pop(el, t, a - .15).match(/[\d.]+/)[0]})`
+    const fill = i === 0 ? p(t, T.toast, T.toast + .6) : 0
+    const u = el.querySelector('u')
+    u.style.width = `${fill * 100}%`
+    u.style.background = fill > .9 ? '#ff4d4d' : 'rgba(255,255,255,.35)'
+    el.querySelector('.q').style.color = fill > .9 ? '#ff4d4d' : 'rgba(255,255,255,.35)'
+    el.querySelector('.q').textContent = fill > .9 ? '%100' : '?%'
+  })
+  const toast = $('toast'), tk = p(t, T.toast + .45, T.toast + .75, E.outBack)
+  toast.style.opacity = Math.min(p(t, T.toast + .45, T.toast + .6), 1 - hookOut)
+  toast.style.transform = `translateX(${Math.sin(clamp(t - T.toast - .75, 0, .4) * 60) * 14 * (1 - clamp((t - T.toast - .75) / .4))}px) scale(${lerp(.7, 1, Math.max(0, tk))})`
+
+  // ---- brand: the tools collapse into the icon; tagline on "tek bir yerde"
+  const intro = $('intro'), bOut = p(t, e(1) + .1, e(1) + .5, E.inOut)
+  intro.style.opacity = Math.min(p(t, T.brand - .15, T.brand + .1), 1 - bOut)
+  intro.style.transform = `translateY(${-70 * bOut}px) scale(${lerp(1, .9, bOut)})`
+  brand(intro, t, T.brand - .15)
+  word(intro.querySelector('.word'), t, at(1, 'Leftover') - .05)
+  const tag = $('tag'), tgk = p(t, T.tag - .1, T.tag + .35, E.outBack)
+  tag.style.opacity = p(t, T.tag - .1, T.tag + .2)
+  tag.style.transform = `scale(${lerp(.7, 1, Math.max(0, tgk))})`
+
+  // ---- menu bar + panel; camera on the panel, by points of interest
+  const mb = $('menubar'), mbOut = p(t, T.panelOut, T.panelOut + .4, E.inOut)
+  mb.style.opacity = Math.min(p(t, T.mb, T.mb + .35), 1 - mbOut)
+  mb.style.transform = `translateY(${(1 - p(t, T.mb, T.mb + .45)) * -60}px)`
+  const hov = life(t, T.click - .35, T.click - .2, T.click + .3, T.click + .5)
+  $('mbitem').style.background = `rgba(255,255,255,${.2 * hov})`
+
+  const pw = $('panelwrap')
+  const inK = p(t, T.click, T.click + .5, E.outBack), backIn = p(t, T.back, T.back + .5, E.outBack)
+  const out1 = p(t, T.panelOut, T.panelOut + .45, E.inOut), out2 = p(t, T.backOut, T.backOut + .45, E.inOut)
+  // [time, scale, panel point x, panel point y, screen y it lands on] (screen x is always 540).
+  // At rest the whole panel sits under the menu bar (top ≈ 320); "ve dahası" shrinks it to make room for the chips.
+  const REST = [2.75, 181, 156, 320 + 156 * 2.75], SMALL = [1.75, 181, 156, 330 + 156 * 1.75]
+  const cam = track([[0, ...REST], [T.ring - .1, ...REST], [T.ring + .3, 3.6, 181, 60, 640],
+    [T.used - .2, 3.6, 181, 60, 640], [T.used + .15, 3.4, 140, 175, 700], [T.reset - .1, 3.4, 140, 175, 700], [T.reset + .25, 3.4, 230, 160, 700],
+    [T.glance - .05, 3.4, 230, 160, 700], [T.glance + .4, ...REST], [s(3) + .1, ...REST], [s(3) + .45, 2.85, 181, 70, 600],
+    [T.more - .2, 2.85, 181, 70, 600], [T.more + .35, ...SMALL], [T.panelOut, ...SMALL], [T.back - .01, ...REST], [T.backOut, 2.9, 181, 156, 320 + 156 * 2.9]], t)
+  const [cs, cx, cy, sy] = cam
+  const sc = cs * lerp(.85, 1, Math.max(0, inK)) * lerp(1, .8, out1)
+  const visible = t < T.panelOut + .5 ? Math.min(p(t, T.click, T.click + .25), 1 - out1) : Math.min(p(t, T.back, T.back + .3), 1 - out2)
+  pw.style.opacity = visible
+  pw.style.transform = `translate(${540 - cx * sc}px, ${sy + (t < T.back ? 0 : (1 - backIn) * 140) - cy * sc}px) scale(${sc})`
+
+  // highlights: rings, the used and reset rows, then each ring as it is named
+  box($('hlA'), t, ROW.used, T.used, T.reset - .1)
+  box($('hlB'), t, ROW.reset, T.reset, T.glance)
+  const named = Object.entries(T.names).find(([, a], i, all) => t >= a - .08 && t < (all[i + 1]?.[1] ?? T.more) - .08)
+  if (named && t < T.more) box($('hlC'), t, ringRect(named[0]), named[1] - .08, (Object.values(T.names).find((x) => x > named[1]) ?? T.more) - .1)
+  else if (t >= T.back) {  // "hız kesmeden": Claude is spent (red); "diğer araca": Copilot still has room (green)
+    if (t < T.switch) box($('hlC'), t, ringRect('Claude'), T.spent, T.switch - .05, '#ff4d4d')
+    else box($('hlC'), t, ringRect('Copilot'), T.switch, T.backOut, '#2fd18a')
+  } else $('hlC').style.opacity = 0
+  // the rings pulse on "halka"
+  $('panel').style.filter = `brightness(${1 + .25 * life(t, T.ring, T.ring + .15, T.ring + .4, T.ring + .7)})`
+
+  // ---- the other providers
+  const moreOut = p(t, T.panelOut, T.panelOut + .4, E.inOut)
+  document.querySelectorAll('#more .chip').forEach((el, i) => {
+    const a = T.more + i * .06, k = p(t, a, a + .4, E.outBack)
+    const isOllama = i === MORE.length - 1
+    el.style.opacity = Math.min(p(t, a, a + .25), 1 - moreOut)
+    el.style.transform = `scale(${lerp(.5, 1, Math.max(0, k)) * (isOllama ? 1 + .12 * life(t, T.ollama, T.ollama + .2, T.ollama + .7, T.ollama + 1) : 1)})`
+  })
+
+  // ---- no password: a lock, crossed out, and the sessions already on the Mac
+  const lock = $('lock'), lk = p(t, T.lock, T.lock + .45, E.outBack), secOut = p(t, T.secOut, T.secOut + .4, E.inOut)
+  lock.style.opacity = Math.min(p(t, T.lock, T.lock + .2), 1 - secOut)
+  lock.style.transform = `scale(${lerp(.5, 1, Math.max(0, lk))})`
+  $('slash').style.strokeDashoffset = 102 * (1 - p(t, T.slash, T.slash + .35))
+  const nk = p(t, T.slash + .2, T.slash + .6, E.outBack)
+  $('nopw').style.opacity = Math.min(p(t, T.slash + .2, T.slash + .4), 1 - secOut)
+  $('nopw').style.transform = `scale(${lerp(.6, 1, Math.max(0, nk))})`
+  for (let i = 0; i < 4; i++) {
+    const el = $('s' + i), a = T.srcs + i * .18, k = p(t, a, a + .4)
+    el.style.opacity = Math.min(k, 1 - secOut)
+    el.style.transform = `translateX(${(1 - k) * -80}px)`
+  }
+
+  // ---- notifications, one per event
+  T.notes.forEach((a, i) => {
+    const el = $('n' + i), k = p(t, a, a + .45, E.outBack), out = p(t, T.notesOut, T.notesOut + .4, E.inOut)
+    el.style.opacity = Math.min(p(t, a, a + .2), 1 - out)
+    el.style.transform = `translateY(${(1 - Math.max(0, k)) * -120}px)`
+  })
+
+  // ---- outro: brand, free + open source, the install command
+  const outro = $('outro'), ctaIn = T.cta ? p(t, T.cta, T.cta + .4, E.inOut) : 0
+  outro.style.opacity = Math.min(p(t, T.outro, T.outro + .4), 1 - ctaIn)
+  brand(outro, t, T.outro)
+  word(outro.querySelector('.word'), t, T.outro + .15)
+  outro.querySelectorAll('.pill').forEach((el, i) => {
+    const a = [T.free, T.brew, T.brew + .5][i]
+    el.style.opacity = p(t, a, a + .4)
+    el.style.transform = `translateY(${(1 - p(t, a, a + .5, E.outBack)) * 30}px)`
+  })
+
+  // ---- platform outro
+  const card = $('endcard')
+  card.style.opacity = T.cta ? p(t, T.cta + .1, T.cta + .45) : 0
+  if (T.cta) card.querySelector('img.ic').style.transform = `scale(${lerp(.6, 1, Math.max(0, p(t, T.cta, T.cta + .6, E.outBack)))})`
+  if (CTA) CTA(t)
+
+  // ---- subtitles
+  const sub = $('sub'), chunk = CHUNKS.find((c) => t >= c.a - .02 && t < c.b)
+  if (!chunk) sub.innerHTML = ''
+  else {
+    if (sub.dataset.id !== String(chunk.a)) {
+      sub.dataset.id = String(chunk.a)
+      sub.innerHTML = chunk.map((x) => `<span>${x.text}</span>`).join(' ')
+    }
+    const k = p(t, chunk.a - .02, chunk.a + .16, E.outBack)
+    sub.style.transform = `translateY(-50%) scale(${lerp(.82, 1, k)})`
+    sub.style.opacity = clamp((t - chunk.a + .02) / .08)
+    sub.querySelectorAll('span').forEach((el, i) => {
+      el.classList.toggle('on', t >= chunk[i].a && (i === chunk.length - 1 || t < chunk[i + 1].a))
+    })
+  }
+}
+const at = (i, x) => T.at(i, x)
+window.ready = setup()
+</script>
+</body>
+</html>

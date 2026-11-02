@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="size" content="1080x1920">
+<base href="/">
+<title>{{name}} TikTok</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="promokit/promokit.css">
+<style>
+  /* TikTok covers the top ~200 px, the bottom ~420 px and a right rail (x > 960, y 800–1500):
+     the action stays in y 200–1200, the subtitles sit around y 1330. */
+  #winwrap { position: absolute; inset: 0; -webkit-mask-image: linear-gradient(#000 1120px, transparent 1250px); }
+  .brand img { width: 300px; height: 300px; }
+  .brand .word { font-size: 140px; letter-spacing: -4px; margin-top: -6px; }
+  .brand .glow { top: -60px; width: 640px; height: 520px; }
+  .pills { flex-direction: column; align-items: center; gap: 18px; margin-top: 40px; }
+  .pill { padding: 16px 30px; font-size: 38px; gap: 12px; }
+  .pill code { font-size: 28px; }
+  .dot { width: 12px; height: 12px; }
+  #sub { left: 70px; width: 900px; top: 1330px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="brand" id="intro" style="top:470px">
+    <div class="glow"></div>
+    <img src="icon.png" alt="">
+    <div class="word">{{name}}</div>
+  </div>
+
+  <div id="winwrap"><div id="win">
+    <img id="shot" alt="">
+    <div class="ripple" id="r1"></div><div class="ripple" id="r2"></div>
+    <svg class="cursor" id="cursor" viewBox="0 0 26 38"><path d="M3 3 L3 29 L9.5 23 L13.8 33.2 L18.3 31.3 L14.1 21.4 L22.8 21.4 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+  </div></div>
+
+  <div class="brand" id="end" style="top:330px">
+    <div class="glow"></div>
+    <img src="icon.png" alt="">
+    <div class="word">{{name}}</div>
+    <div class="pills"></div>
+  </div>
+
+  <div id="sub"></div>
+</div>
+
+<script type="module">
+import { $, lerp, E, p, track, scene, project, narration, subtitles, backdrop, BACKDROPS,
+  demo, orPlaceholder, windowSize, frameAt, show, place, pointer, rise, outroCta } from './promokit/promokit.js'
+
+// Narrated, vertical. Everything hangs off the narration: N.cue('name') is when the word marked {name} in
+// promo.json's script starts, N.start('demo') / N.end('demo') when that line's speech starts / ends.
+let N, bg, sub, cta, D, T, WIN
+async function setup() {
+  N = await narration()
+  const { cue, start, end } = N
+  window.DURATION = N.duration
+  bg = backdrop($('stage'), BACKDROPS.portrait)
+  sub = subtitles($('sub'), N)
+  WIN = await windowSize('frames/01.png')  // the app window in points (frames are 2× screenshots of it)
+  document.documentElement.style.setProperty('--win-w', `${WIN[0]}px`)
+  document.documentElement.style.setProperty('--win-h', `${WIN[1]}px`)
+
+  // The demo: which screenshot is up from when, where the camera looks (zoom, focus x, y in window points)
+  // and what gets clicked. Add a {cue} in the script for every moment something should happen.
+  const [w, h] = WIN
+  const shots = [
+    { t: 0, file: 'frames/01.png' },
+    { t: cue('shot1'), file: 'frames/02.png', click: [w * .5, h * .5] },
+    { t: cue('shot2'), file: 'frames/03.png', view: [1.8, w * .3, h * .3] },
+  ]
+  for (const s of shots) s.file = await orPlaceholder(s.file, WIN)
+  // the whole window fits 1000 px wide and the band above the subtitles
+  D = demo(shots, { fit: Math.min(1000 / w, 820 / h), at: [540, 700], win: WIN })
+
+  const cfg = await project()
+  $('end').querySelector('.pills').innerHTML = (cfg.links ?? []).map((l) => /\s/.test(l)
+    ? `<div class="pill"><code>${l}</code></div>` : `<div class="pill"><span class="dot" style="background:#9aa8ff"></span>${l}</div>`).join('')
+  // the fixed sign-off after the last line: the end card slides up, like / comment / share / save, "Takip et"
+  cta = outroCta($('stage'), N, { lift: $('end') })
+  T = { brand: cue('brand'), winIn: start('demo') - .25, winOut: start('cta') - .5, outro: start('cta'), link: cue('link'), introOut: end('intro') }
+}
+
+function brand(el, t, a) {
+  el.querySelector('img').style.transform = `scale(${lerp(.55, 1, p(t, a, a + .7, E.outBack))})`
+  el.querySelector('.glow').style.opacity = p(t, a + .1, a + 1)
+}
+
+async function render(t) {
+  bg(t)
+
+  // intro: the icon is up from the first frame (TikTok's cover), the name lands on {brand}
+  const intro = $('intro'), out = p(t, T.introOut + .1, T.introOut + .5, E.inOut)
+  intro.style.opacity = Math.min(p(t, 0, .3), 1 - out)
+  intro.style.transform = `translateY(${-70 * out}px) scale(${lerp(1, .9, out)})`
+  brand(intro, t, 0)
+  rise(intro.querySelector('.word'), t, T.brand - .05)
+
+  // the app window
+  const enter = p(t, T.winIn, T.winIn + .8), exit = p(t, T.winOut, T.winOut + .6, E.inOut)
+  const cam = track(D.views, t, [0])
+  place($('win'), cam, { k: lerp(.86, 1, enter) * lerp(1, .85, exit), dy: (1 - enter) * 260 - exit * 120,
+    opacity: Math.min(enter * 1.4, 1 - exit), blur: exit * 10 })
+  if (enter > 0 && exit < 1) await show($('shot'), frameAt(D.frames, t))
+  pointer(t, { cursor: $('cursor'), ripples: [$('r1'), $('r2')], path: D.path, clicks: D.clicks,
+    scale: 1.3 / cam[0], rippleScale: 1.3 / cam[0] })
+
+  // end card: name and links
+  const outro = $('end'), o = T.outro
+  outro.style.opacity = p(t, o - .2, o + .25)
+  brand(outro, t, o - .2)
+  rise(outro.querySelector('.word'), t, o)
+  outro.querySelectorAll('.pill').forEach((el, i) => {
+    const a = T.link - .1 + i * .25
+    el.style.opacity = p(t, a, a + .4)
+    el.style.transform = `translateY(${(1 - p(t, a, a + .5, E.outBack)) * 30}px)`
+  })
+
+  cta(t)
+  sub(t)
+}
+
+scene(setup, render)
+</script>
+</body>
+</html>

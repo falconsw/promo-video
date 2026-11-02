@@ -1,0 +1,40 @@
+{
+  "id": "outro",
+  "gap": 0.6,
+  "text": "{outro-like}Beğen, {outro-comment}yorumla, {outro-share}paylaş, {outro-save}kaydet; daha fazlası için {outro-follow}abone ol!",
+  "screen": "sabit kapanış (YouTube): bitiş kartı yukarı kayar; YouTube tarzı beğen, yorum, paylaş, kaydet sırayla basılır, sonra kırmızı Abone ol",
+  "model": "gemini-3.8-flash-tts",
+  "style": "The same upbeat Turkish tech creator, native Istanbul Turkish, signing off: friendly and energetic, a crisp rhythmic beat on each of the four verbs, then warm and smiling on 'daha fazlası için abone ol!'",
+  "sfx": [
+    {
+      "file": "tap",
+      "cue": "outro-like",
+      "offset": 0.05,
+      "gain": -9
+    },
+    {
+      "file": "tap",
+      "cue": "outro-comment",
+      "offset": 0.05,
+      "gain": -9
+    },
+    {
+      "file": "tap",
+      "cue": "outro-share",
+      "offset": 0.05,
+      "gain": -9
+    },
+    {
+      "file": "tap",
+      "cue": "outro-save",
+      "offset": 0.05,
+      "gain": -9
+    },
+    {
+      "file": "tap",
+      "cue": "outro-follow",
+      "offset": 0.05,
+      "gain": -7
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "name": "{{name}}",
+  "slug": "{{slug}}",
+  "tagline": "What it does, in one line",
+  "links": [
+    "github.com/you/{{slug}}"
+  ],
+  "capture": "",
+  "output": "~/Movies/{{name}} Promo",
+  "voice": {
+    "provider": "gemini",
+    "voice": "sadachbia",
+    "model": "gemini-3.8-flash-tts",
+    "lang": "tr",
+    "style": "Confident, warm Turkish tech creator narrating a short TikTok demo of their own app, with the careful, standard diction of a professional narrator. Pronounce every word fully, exactly as written: always say the final r of every -yor ending (yapıyor, not yapıyo; oluyor, not oluyo), the final l of nasıl, and every final consonant; no colloquial clipping, no swallowed syllables. Brisk but clear.",
+    "say": { "Claude": "Klod", "Whisper": "Vispır", "API": "Ey-Pi-Ay" },
+    "tail": 1.6
+  },
+  "script": [
+    {
+      "id": "hook",
+      "gap": 0.25,
+      "text": "Bilgisayarında her gün aynı şeyle mi uğraşıyorsun?",
+      "screen": "the problem, in the app's words"
+    },
+    {
+      "id": "intro",
+      "gap": 0.35,
+      "text": "Ben de bunu çözen bir uygulama yazdım: {brand}{{name}}.",
+      "screen": "the app icon and name"
+    },
+    {
+      "id": "demo",
+      "gap": 0.45,
+      "text": "Tek tıkla {shot1}işini yapıyor, {shot2}sonucu da hemen görüyorsun.",
+      "screen": "the feature, on the real screen"
+    },
+    {
+      "id": "cta",
+      "gap": 0.45,
+      "text": "Ücretsiz. {link}GitHub'da {{name}} diye arat.",
+      "screen": "end card: icon, name, where to get it"
+    }
+  ],
+  "formats": {
+    "tiktok": {
+      "scene": "scenes/tiktok.html",
+      "voice": true
+    },
+    "youtube": {
+      "scene": "scenes/tiktok.html",
+      "voice": true
+    },
+    "x": {
+      "scene": "scenes/tiktok.html",
+      "voice": true
+    },
+    "landscape": {
+      "scene": "scenes/landscape.html"
+    }
+  },
+  "cover": {
+    "pill": "macOS uygulaması",
+    "lines": [
+      "BİRİNCİ SATIR",
+      "İKİNCİ SATIR",
+      "FİİLLİ SORU?"
+    ],
+    "scene": "sits at a desk at night in front of a laptop … (English: what the developer character is doing; the problem the app solves)"
+  },
+  "publish": {
+    "date": "2026-01-01 20:00",
+    "title": "YouTube Shorts başlığı",
+    "description": "YouTube açıklaması",
+    "tiktok": "TikTok açıklaması",
+    "hashtags": [
+      "#yazılım"
+    ],
+    "links": {
+      "GitHub": "https://github.com/you/{{slug}}"
+    },
+    "x": "X ana gönderisi (video yüklenir, link yok)",
+    "x_date": "2026-01-01 11:00",
+    "x_reason": ""
+  }
+}
